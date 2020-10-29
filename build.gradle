@@ -1,0 +1,20 @@
+plugins {
+    id "architect-plugin" version "1.0.10"
+}
+
+architect {
+    minecraft = rootProject.minecraft_version
+}
+
+allprojects {
+    apply plugin: "java"
+    apply plugin: "architect-plugin"
+
+    archivesBaseName = rootProject.archives_base_name
+    version = rootProject.mod_version
+    group = rootProject.maven_group
+
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+    }
+}
