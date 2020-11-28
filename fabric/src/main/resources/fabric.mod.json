@@ -11,7 +11,7 @@
     "homepage": "https://fabricmc.net/",
     "sources": "https://github.com/FabricMC/fabric-example-mod"
   },
-  "license": "CC0-1.0",
+  "license": "Insert License Here",
   "icon": "assets/modid/icon.png",
   "environment": "*",
   "entrypoints": {
@@ -25,7 +25,8 @@
   "depends": {
     "fabricloader": ">=0.7.4",
     "fabric": "*",
-    "minecraft": "1.16.x"
+    "minecraft": ">=1.16.4",
+    "architectury": ">=1.1.53"
   },
   "suggests": {
     "flamingo": "*"

@@ -1,0 +1,36 @@
+modLoader = "javafml"
+loaderVersion = "[35,)"
+#issueTrackerURL = ""
+license = "Insert License Here"
+
+[[mods]]
+modId = "modid"
+version = "${file.jarVersion}"
+displayName = "Example Mod"
+#authors = ""
+description = '''
+This is an example description! Tell everyone what your mod is about!
+'''
+#logoFile = ""
+license = "Insert License Here"
+
+[[dependencies.kubejs]]
+modId = "forge"
+mandatory = true
+versionRange = "[35,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.kubejs]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.16.2,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.kubejs]]
+modId = "architectury"
+mandatory = true
+versionRange = "[1.1.53,)"
+ordering = "AFTER"
+side = "BOTH"
