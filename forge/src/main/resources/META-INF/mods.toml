@@ -4,33 +4,32 @@ loaderVersion = "[35,)"
 license = "Insert License Here"
 
 [[mods]]
-modId = "modid"
-version = "${file.jarVersion}"
+modId = "examplemod"
+version = "${version}"
 displayName = "Example Mod"
-#authors = ""
+authors = "Me!"
 description = '''
 This is an example description! Tell everyone what your mod is about!
 '''
 #logoFile = ""
-license = "Insert License Here"
 
-[[dependencies.kubejs]]
+[[dependencies.examplemod]]
 modId = "forge"
 mandatory = true
 versionRange = "[35,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.kubejs]]
+[[dependencies.examplemod]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.16.2,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.kubejs]]
+[[dependencies.examplemod]]
 modId = "architectury"
 mandatory = true
-versionRange = "[1.1.53,)"
+versionRange = "[1.1.55,)"
 ordering = "AFTER"
 side = "BOTH"
