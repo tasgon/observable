@@ -1,10 +1,13 @@
 plugins {
-    id "fabric-loom"
     id "com.github.johnrengelman.shadow" version "5.0.0"
 }
 
 configurations {
     shadow
+}
+
+architectury {
+    platformSetupLoomIde()
 }
 
 dependencies {
@@ -17,7 +20,7 @@ dependencies {
     compileOnly(project(path: ":common")) {
         transitive = false
     }
-    runtimeOnly(project(path: ":common", configuration: "transformed")) {
+    runtimeOnly(project(path: ":common", configuration: "transformForgeFakeMod")) {
         transitive = false
     }
     shadow(project(path: ":common", configuration: "transformed")) {
@@ -40,4 +43,5 @@ shadowJar {
 remapJar {
     dependsOn(shadowJar)
     input.set(shadowJar.archivePath)
+    archiveClassifier = "fabric"
 }

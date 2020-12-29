@@ -1,61 +1,28 @@
-buildscript {
-    repositories {
-        maven { url "https://files.minecraftforge.net/maven" }
-        jcenter()
-        mavenCentral()
-    }
-    dependencies {
-        classpath(group: "net.minecraftforge.gradle", name: "ForgeGradle", version: "3.+", changing: true)
-    }
-}
-
 plugins {
     id "com.github.johnrengelman.shadow" version "5.0.0"
-    id "eclipse"
-}
-
-apply plugin: "net.minecraftforge.gradle"
-
-minecraft {
-    mappings(channel: "official", version: rootProject.architect.minecraft)
-    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-    runs {
-        client {
-            workingDirectory project.file("run")
-            mods {
-                examplemod {
-                    source sourceSets.main
-                }
-            }
-        }
-        server {
-            workingDirectory project.file("run")
-            mods {
-                examplemod {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
-}
-
-repositories {
-    jcenter()
-    maven { url "https://files.minecraftforge.net/maven" }
 }
 
 configurations {
     shadow
 }
 
+architectury {
+    platformSetupLoomIde()
+}
+
 dependencies {
-    minecraft("net.minecraftforge:forge:${rootProject.architect.minecraft}-${rootProject.forge_version}")
-    compile fg.deobf("me.shedaniel:architectury:${rootProject.architectury_version}:forge")
-    
-    compile(project(path: ":common", configuration: "mcpGenerateMod")) {
+    minecraft("com.mojang:minecraft:${rootProject.architect.minecraft}")
+    mappings(minecraft.officialMojangMappings())
+    forge("net.minecraftforge:forge:${rootProject.architect.minecraft}-${rootProject.forge_version}")
+    modCompile("me.shedaniel:architectury:${rootProject.architectury_version}:forge")
+
+    compileOnly(project(path: ":common")) {
         transitive = false
     }
-    shadow(project(path: ":common", configuration: "mcp")) {
+    runtimeOnly(project(path: ":common", configuration: "transformForgeFakeMod")) {
+        transitive = false
+    }
+    shadow(project(path: ":common", configuration: "transformForge")) {
         transitive = false
     }
 }
@@ -64,9 +31,11 @@ shadowJar {
     exclude "fabric.mod.json"
 
     configurations = [project.configurations.shadow]
-    classifier null
+    classifier "shadow"
 }
 
-reobf {
-    shadowJar {}
+remapJar {
+    dependsOn(shadowJar)
+    input.set(shadowJar.archivePath)
+    archiveClassifier = "forge"
 }
