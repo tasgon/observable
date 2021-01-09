@@ -20,7 +20,7 @@ dependencies {
     compileOnly(project(path: ":common")) {
         transitive = false
     }
-    runtimeOnly(project(path: ":common", configuration: "transformForgeFakeMod")) {
+    runtimeOnly(project(path: ":common", configuration: "transformedRuntime")) {
         transitive = false
     }
     shadow(project(path: ":common", configuration: "transformed")) {
