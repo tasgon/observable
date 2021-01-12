@@ -14,6 +14,7 @@ dependencies {
     minecraft("com.mojang:minecraft:${rootProject.architect.minecraft}")
     mappings(minecraft.officialMojangMappings())
     forge("net.minecraftforge:forge:${rootProject.architect.minecraft}-${rootProject.forge_version}")
+    // Remove the next line if you don't want to depend on the API
     modCompile("me.shedaniel:architectury:${rootProject.architectury_version}:forge")
 
     compileOnly(project(path: ":common")) {

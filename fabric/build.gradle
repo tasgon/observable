@@ -15,6 +15,7 @@ dependencies {
     mappings(minecraft.officialMojangMappings())
     modCompile("net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}")
     modCompile("net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}")
+    // Remove the next line if you don't want to depend on the API
     modCompile("me.shedaniel:architectury:${rootProject.architectury_version}:fabric")
 
     compileOnly(project(path: ":common")) {
