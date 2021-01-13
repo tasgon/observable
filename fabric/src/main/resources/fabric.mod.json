@@ -19,9 +19,6 @@
       "net.examplemod.fabric.ExampleModFabric"
     ]
   },
-  "mixins": [
-    "examplemod.mixins.json"
-  ],
   "depends": {
     "fabricloader": ">=0.7.4",
     "fabric": "*",

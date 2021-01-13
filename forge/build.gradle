@@ -10,6 +10,11 @@ architectury {
     platformSetupLoomIde()
 }
 
+loom {
+    // Enable this for yarn to work
+    useFabricMixin = true
+}
+
 dependencies {
     minecraft("com.mojang:minecraft:${rootProject.architect.minecraft}")
     mappings(minecraft.officialMojangMappings())
