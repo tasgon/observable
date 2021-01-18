@@ -1,5 +1,5 @@
 dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.architect.minecraft}"
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
     mappings minecraft.officialMojangMappings()
     // Remove the next line if you don't want to depend on the API
     modCompile "me.shedaniel:architectury:${rootProject.architectury_version}"

@@ -16,9 +16,9 @@ loom {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:${rootProject.architect.minecraft}")
+    minecraft("com.mojang:minecraft:${rootProject.minecraft_version}")
     mappings(minecraft.officialMojangMappings())
-    forge("net.minecraftforge:forge:${rootProject.architect.minecraft}-${rootProject.forge_version}")
+    forge("net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}")
     // Remove the next line if you don't want to depend on the API
     modCompile("me.shedaniel:architectury:${rootProject.architectury_version}:forge")
 
@@ -33,6 +33,14 @@ dependencies {
     }
 }
 
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+}
+
 shadowJar {
     exclude "fabric.mod.json"
 
@@ -43,5 +51,5 @@ shadowJar {
 remapJar {
     dependsOn(shadowJar)
     input.set(shadowJar.archivePath)
-    archiveClassifier = "forge"
+    classifier "forge"
 }
