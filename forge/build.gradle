@@ -11,8 +11,7 @@ architectury {
 }
 
 loom {
-    // Enable this for yarn to work
-    // useFabricMixin = true
+     useFabricMixin = true
 }
 
 dependencies {
