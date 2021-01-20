@@ -24,10 +24,10 @@ dependencies {
     compileOnly(project(path: ":common")) {
         transitive = false
     }
-    runtimeOnly(project(path: ":common", configuration: "transformForgeFakeMod")) {
+    runtimeOnly(project(path: ":common", configuration: "transformDevelopmentForge")) {
         transitive = false
     }
-    shadow(project(path: ":common", configuration: "transformForge")) {
+    shadow(project(path: ":common", configuration: "transformProductionForge")) {
         transitive = false
     }
 }

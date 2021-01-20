@@ -21,10 +21,10 @@ dependencies {
     compileOnly(project(path: ":common")) {
         transitive = false
     }
-    runtimeOnly(project(path: ":common", configuration: "transformedRuntime")) {
+    runtimeOnly(project(path: ":common", configuration: "transformDevelopmentFabric")) {
         transitive = false
     }
-    shadow(project(path: ":common", configuration: "transformed")) {
+    shadow(project(path: ":common", configuration: "transformProductionFabric")) {
         transitive = false
     }
 }
