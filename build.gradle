@@ -31,7 +31,7 @@ allprojects {
         // We'll use that if it's available, but otherwise we'll use the older option.
         def targetVersion = 8
         if (JavaVersion.current().isJava9Compatible()) {
-            options.release = 8
+            options.release = targetVersion
         }
     }
 
