@@ -12,4 +12,4 @@ include("common")
 include("fabric")
 include("forge")
 
-rootProject.name = "examplemod"
+rootProject.name = "architect-example-mod"
