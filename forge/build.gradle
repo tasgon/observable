@@ -8,6 +8,7 @@ configurations {
 
 architectury {
     platformSetupLoomIde()
+    forge()
 }
 
 loom {
@@ -19,10 +20,10 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     modCompile "me.shedaniel:architectury:${rootProject.architectury_version}:forge"
 
-    compileOnly(project(path: ":common")) {
+    implementation(project(path: ":common")) {
         transitive = false
     }
-    runtimeOnly(project(path: ":common", configuration: "transformDevelopmentForge")) {
+    developmentForge(project(path: ":common")) {
         transitive = false
     }
     shadow(project(path: ":common", configuration: "transformProductionForge")) {
