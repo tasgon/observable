@@ -18,7 +18,7 @@ loom {
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
     // Remove the next line if you don't want to depend on the API
-    modCompile "me.shedaniel:architectury:${rootProject.architectury_version}:forge"
+    modCompile "me.shedaniel:architectury-forge:${rootProject.architectury_version}"
 
     implementation(project(path: ":common")) {
         transitive = false
