@@ -1,6 +1,6 @@
 plugins {
-    id "architectury-plugin" version "3.0.83"
-    id "forgified-fabric-loom" version "0.6.68" apply false
+    id "architectury-plugin" version "3.0.84"
+    id "forgified-fabric-loom" version "0.6.69" apply false
 }
 
 architectury {
@@ -13,7 +13,7 @@ subprojects {
     loom {
         silentMojangMappingsLicense()
     }
-    
+
     dependencies {
         minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
         // The following line declares the mojmap mappings, you may use other mappings as well
@@ -26,10 +26,19 @@ subprojects {
 allprojects {
     apply plugin: "java"
     apply plugin: "architectury-plugin"
+    apply plugin: "maven-publish"
 
     archivesBaseName = rootProject.archives_base_name
     version = rootProject.mod_version
     group = rootProject.maven_group
+
+    repositories {
+        // Add repositories to retrieve artifacts from in here.
+        // You should only use this when depending on other mods because
+        // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html
+        // for more information about repositories.
+    }
 
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"

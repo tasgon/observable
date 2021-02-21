@@ -1,12 +1,33 @@
 dependencies {
-    // Remove the next line if you don't want to depend on the API
-    modCompile "me.shedaniel:architectury:${rootProject.architectury_version}"
-    compileOnly "com.google.code.findbugs:jsr305:3.+"
-    // We depend on fabric loader here to use the fabric @Environment annotations
+    // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
     // Do NOT use other classes from fabric loader
-    modCompile "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    // Remove the next line if you don't want to depend on the API
+    modApi "me.shedaniel:architectury:${rootProject.architectury_version}"
 }
 
 architectury {
     common()
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        mavenCommon(MavenPublication) {
+            artifactId = rootProject.archives_base_name
+            // add all the jars that should be included when publishing to maven
+            artifact remapJar
+            artifact(sourcesJar) {
+                builtBy remapSourcesJar
+            }
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+    }
 }
