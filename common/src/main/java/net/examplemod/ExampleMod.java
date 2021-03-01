@@ -32,6 +32,6 @@ public class ExampleMod {
     public static void init() {
         ITEMS.register();
         
-        System.out.println(ExampleExpectPlatform.getConfigDirectory().getAbsolutePath());
+        System.out.println(ExampleExpectPlatform.getConfigDirectory().toAbsolutePath().normalize().toString());
     }
 }

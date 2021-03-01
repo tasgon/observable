@@ -3,7 +3,7 @@ package net.examplemod;
 import me.shedaniel.architectury.annotations.ExpectPlatform;
 import me.shedaniel.architectury.platform.Platform;
 
-import java.io.File;
+import java.nio.file.Path;
 
 public class ExampleExpectPlatform {
     /**
@@ -18,7 +18,7 @@ public class ExampleExpectPlatform {
      * Actual Forge: net.examplemod.forge.ExampleExpectPlatformImpl#getConfigDirectory()
      */
     @ExpectPlatform
-    public static File getConfigDirectory() {
+    public static Path getConfigDirectory() {
         // Just throw an error, the content should get replaced at runtime.
         throw new AssertionError();
     }
