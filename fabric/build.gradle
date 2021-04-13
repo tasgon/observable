@@ -56,9 +56,9 @@ java {
 }
 
 sourcesJar {
-    def commonSources = project(":common").remapSourcesJar
+    def commonSources = project(":common").sourcesJar
     dependsOn commonSources
-    from zipTree(commonSources.output)
+    from commonSources.archiveFile.map { zipTree(it) }
 }
 
 publishing {
