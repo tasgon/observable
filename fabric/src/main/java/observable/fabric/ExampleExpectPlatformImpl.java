@@ -1,6 +1,6 @@
-package net.examplemod.fabric;
+package observable.fabric;
 
-import net.examplemod.ExampleExpectPlatform;
+import observable.ExampleExpectPlatform;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Path;
