@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "id": "examplemod",
+  "id": "observable",
   "version": "${version}",
-  "name": "Example Mod",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "name": "Observable",
+  "description": "See what's lagging your world.",
   "authors": [
     "Me!"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/tasgon/observable",
+    "sources": "https://github.com/tasgon/observable"
   },
-  "license": "Insert License Here",
+  "license": "MPL",
   "icon": "assets/examplemod/icon.png",
   "environment": "*",
   "entrypoints": {

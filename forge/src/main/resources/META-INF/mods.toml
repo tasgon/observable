@@ -1,33 +1,33 @@
 modLoader = "javafml"
 loaderVersion = "[35,)"
 #issueTrackerURL = ""
-license = "Insert License Here"
+license = "MPL"
 
 [[mods]]
-modId = "examplemod"
+modId = "observable"
 version = "${version}"
-displayName = "Example Mod"
+displayName = "Observable"
 authors = "Me!"
 description = '''
-This is an example description! Tell everyone what your mod is about!
+See what's lagging your world.
 '''
 #logoFile = ""
 
-[[dependencies.examplemod]]
+[[dependencies.observable]]
 modId = "forge"
 mandatory = true
 versionRange = "[35,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.examplemod]]
+[[dependencies.observable]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.16.2,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.examplemod]]
+[[dependencies.observable]]
 modId = "architectury"
 mandatory = true
 versionRange = "[1.1.55,)"

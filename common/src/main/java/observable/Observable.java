@@ -1,4 +1,4 @@
-package net.examplemod;
+package observable;
 
 import me.shedaniel.architectury.registry.CreativeTabs;
 import me.shedaniel.architectury.registry.DeferredRegister;
@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
 
-public class ExampleMod {
+public class Observable {
     public static final String MOD_ID = "examplemod";
     // We can use this if we don't want to use DeferredRegister
     public static final LazyLoadedValue<Registries> REGISTRIES = new LazyLoadedValue<>(() -> Registries.get(MOD_ID));
@@ -27,7 +27,7 @@ public class ExampleMod {
     
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(MOD_ID, Registry.ITEM_REGISTRY);
     public static final RegistrySupplier<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () ->
-            new Item(new Item.Properties().tab(ExampleMod.EXAMPLE_TAB)));
+            new Item(new Item.Properties().tab(Observable.EXAMPLE_TAB)));
     
     public static void init() {
         ITEMS.register();

@@ -1,4 +1,4 @@
-package net.examplemod;
+package observable;
 
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import me.shedaniel.architectury.platform.Platform;
