@@ -16,9 +16,12 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "net.examplemod.fabric.ExampleModFabric"
+      "observable.fabric.ObservableFabric"
     ]
   },
+  "mixins": [
+    "mixins.common.json"
+  ],
   "depends": {
     "fabricloader": ">=0.7.4",
     "fabric": "*",

@@ -1,7 +1,17 @@
+buildscript {
+    ext.kotlin_version = '1.5.20'
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
 plugins {
     id "architectury-plugin" version "3.2-SNAPSHOT"
     id "dev.architectury.loom" version "0.7.2-SNAPSHOT" apply false
 }
+apply plugin: 'kotlin'
 
 architectury {
     minecraft = rootProject.minecraft_version
@@ -21,6 +31,7 @@ subprojects {
         // The following line declares the yarn mappings you may select this one as well.
         // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
     }
+
 }
 
 allprojects {
@@ -54,5 +65,21 @@ allprojects {
 
     java {
         withSourcesJar()
+    }
+}
+repositories {
+    mavenCentral()
+}
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
