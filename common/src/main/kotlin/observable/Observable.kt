@@ -1,15 +1,26 @@
 package observable
 
+import com.mojang.blaze3d.platform.InputConstants
+import me.shedaniel.architectury.event.events.client.ClientRawInputEvent
+import me.shedaniel.architectury.event.events.client.ClientTickEvent
+import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.registry.CreativeTabs
 import me.shedaniel.architectury.registry.DeferredRegister
+import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.registry.Registries
+import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.LazyLoadedValue
+import net.minecraft.world.InteractionResult
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
+import observable.client.ProfileScreen
 import org.apache.logging.log4j.LogManager
+import org.lwjgl.glfw.GLFW
+import kotlin.math.roundToInt
 
 object Observable {
     const val MOD_ID = "observable"
@@ -22,9 +33,33 @@ object Observable {
     val ITEMS = DeferredRegister.create(MOD_ID, Registry.ITEM_REGISTRY)
     val EXAMPLE_ITEM = ITEMS.register("example_item") { Item(Item.Properties().tab(Observable.EXAMPLE_TAB)) }
 
-    public val LOGGER = LogManager.getLogger("Observable")
+    val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
+        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
+
+    val LOGGER = LogManager.getLogger("Observable")
 
     @JvmStatic
     fun init() {
+    }
+
+    @JvmStatic
+    fun clientInit() {
+        KeyBindings.registerKeyBinding(PROFILE_KEYBIND)
+
+        ClientTickEvent.CLIENT_POST.register {
+            if (PROFILE_KEYBIND.consumeClick()) {
+                it.setScreen(ProfileScreen())
+            }
+        }
+
+        ClientRawInputEvent.MOUSE_SCROLLED.register { mc, dir ->
+            LOGGER.info("scroll")
+            (mc.screen as? ProfileScreen)?.let {
+                it.duration += dir.roundToInt()
+                InteractionResult.CONSUME
+            } ?: run {
+                InteractionResult.PASS
+            }
+        }
     }
 }

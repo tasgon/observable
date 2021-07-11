@@ -18,12 +18,15 @@ import java.util.function.Consumer;
 
 @Mixin(Level.class)
 public class LevelMixin {
+    /**
+     * This is an overwrite to insert the monitoring code.
+     */
     @Overwrite
     public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
         try {
             consumer.accept(entity);
-        } catch (Throwable var6) {
-            CrashReport crashReport = CrashReport.forThrowable(var6, "Ticking entity");
+        } catch (Throwable throwable) {
+            CrashReport crashReport = CrashReport.forThrowable(throwable, "Ticking entity");
             CrashReportCategory crashReportCategory = crashReport.addCategory("Entity being ticked");
             entity.fillCrashReportCategory(crashReportCategory);
             throw new ReportedException(crashReport);

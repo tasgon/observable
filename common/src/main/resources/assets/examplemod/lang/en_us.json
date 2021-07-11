@@ -1,3 +1,10 @@
 {
-  "item.examplemod.example_item": "Example Item"
+  "screen.observable.profile": "Profile",
+  "key.observable.profile": "Show profiler screen",
+  "category.observable.keybinds": "Observable",
+  "text.observable.profile_tps": "Profile TPS",
+  "text.observable.profile_fps": "Profile FPS\n(not implemented yet)",
+  "text.observable.results": "Results",
+  "text.observable.overlay": "Overlay",
+  "text.observable.discord": "Contact me"
 }

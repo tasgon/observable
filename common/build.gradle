@@ -8,6 +8,7 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     modApi "me.shedaniel:architectury:${rootProject.architectury_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
 }
 
 architectury {
