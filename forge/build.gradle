@@ -15,7 +15,15 @@ architectury {
 loom {
     useFabricMixin = true
 
-    mixinConfig "mixins.common.json"
+    mixinConfigs = ["mixins.forge.json", "mixins.common.json"]
+}
+
+minecraft {
+    runs {
+        client {
+            vmArg "-Dmixin.debug=true"
+        }
+    }
 }
 
 dependencies {

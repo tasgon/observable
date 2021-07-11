@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "observable.forge.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "EventBusMixin"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

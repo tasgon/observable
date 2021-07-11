@@ -3,6 +3,7 @@ package observable
 import com.mojang.blaze3d.platform.InputConstants
 import me.shedaniel.architectury.event.events.client.ClientRawInputEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
+import me.shedaniel.architectury.networking.NetworkChannel
 import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.registry.CreativeTabs
 import me.shedaniel.architectury.registry.DeferredRegister
@@ -18,6 +19,7 @@ import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import observable.client.ProfileScreen
+import observable.server.Profiler
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
 import kotlin.math.roundToInt
@@ -36,7 +38,11 @@ object Observable {
     val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
         InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
 
+//    val CHANNEL = NetworkChannel.create(ResourceLocation("net/channel/observable"))
+
     val LOGGER = LogManager.getLogger("Observable")
+
+    val PROFILER: Profiler? = null
 
     @JvmStatic
     fun init() {
