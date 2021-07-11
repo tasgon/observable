@@ -13,7 +13,6 @@ class ObservableForge {
     init {
         // Submit our event bus to let architectury register our content on the right time
         EventBuses.registerModEventBus(Observable.MOD_ID, FMLJavaModLoadingContext.get().modEventBus)
-        MinecraftForge.EVENT_BUS.register(EventTester)
         FMLJavaModLoadingContext.get().modEventBus.addListener(this::onClientInit)
         init()
     }

@@ -9,6 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.TickableBlockEntity;
 import observable.Observable;
+import observable.server.Profiler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,7 +25,13 @@ public class LevelMixin {
     @Overwrite
     public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
         try {
-            consumer.accept(entity);
+            if (Observable.INSTANCE.getPROFILER() == null) consumer.accept(entity);
+            else {
+                long start = System.nanoTime();
+                consumer.accept(entity);
+                long end = System.nanoTime();
+                Observable.INSTANCE.getPROFILER().process(entity, end - start);
+            }
         } catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.forThrowable(throwable, "Ticking entity");
             CrashReportCategory crashReportCategory = crashReport.addCategory("Entity being ticked");
@@ -36,6 +43,12 @@ public class LevelMixin {
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
     public void redirectTick(TickableBlockEntity blockEntity) {
-        blockEntity.tick();
+        if (Observable.INSTANCE.getPROFILER() == null) blockEntity.tick();
+        else {
+            long start = System.nanoTime();
+            blockEntity.tick();
+            long end = System.nanoTime();
+            Observable.INSTANCE.getPROFILER().process((Entity) blockEntity, end - start);
+        }
     }
 }
