@@ -7,7 +7,7 @@ class Profiler {
 
     var timingsMap = HashMap<Int, EntityTimingData>()
 
-    fun tick(entity: Entity, time: Long) {
+    fun process(entity: Entity, time: Long) {
         var timingInfo = timingsMap.getOrDefault(entity.id, EntityTimingData(0, 0))
         timingInfo.time += time
         timingInfo.ticks++
