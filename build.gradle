@@ -32,6 +32,7 @@ subprojects {
         // The following line declares the yarn mappings you may select this one as well.
         // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
         implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2"
+        implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2"
 
     }
 

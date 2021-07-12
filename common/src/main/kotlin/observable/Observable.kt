@@ -2,6 +2,7 @@ package observable
 
 import com.mojang.blaze3d.platform.InputConstants
 import me.shedaniel.architectury.event.events.LifecycleEvent
+import me.shedaniel.architectury.event.events.PlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientRawInputEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.networking.NetworkChannel
@@ -13,6 +14,7 @@ import me.shedaniel.architectury.registry.Registries
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.core.Registry
+import net.minecraft.network.chat.TextComponent
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.LazyLoadedValue
 import net.minecraft.world.InteractionResult
@@ -53,7 +55,7 @@ object Observable {
 
     @JvmStatic
     fun init() {
-        CHANNEL.register<C2SPacket.InitTPSProfile> { t: C2SPacket.InitTPSProfile, supplier ->
+        CHANNEL.register { t: C2SPacket.InitTPSProfile, supplier ->
             PROFILER?.startRunning(t.duration)
         }
 
@@ -62,13 +64,34 @@ object Observable {
             LOGGER.info("Received profiling result with ${data.size} entries")
             data.slice(0..5).withIndex().forEach { (idx, v) ->
                 val (obj, timingData) = v
-                LOGGER.info("$idx: ${obj.className} -- ${(timingData.rate * 1000).roundToInt()} us/t")
+                val className =
+                        obj.entity?.let { it.javaClass.name } ?:
+                        obj.blockEntity?.let { it.javaClass.name } ?:
+                        "Unknown class"
+                LOGGER.info("$idx: ${className} -- ${(timingData.rate * 1000).roundToInt()} us/t")
             }
         }
 
         LifecycleEvent.SERVER_WORLD_LOAD.register {
             PROFILER = Profiler(it)
-            Observable.LOGGER.info("Loaded profiler")
+            LOGGER.info("Loaded profiler")
+        }
+
+        LifecycleEvent.SERVER_WORLD_UNLOAD.register {
+            PROFILER = null
+            LOGGER.info("Unloaded profiler")
+        }
+
+        PlayerEvent.PLAYER_JOIN.register {
+            PROFILER?.players?.add(it)
+            val name = (it.name as TextComponent).text
+            LOGGER.info("$name joined")
+        }
+
+        PlayerEvent.PLAYER_QUIT.register {
+            PROFILER?.players?.remove(it)
+            val name = (it.name as TextComponent).text
+            LOGGER.info("$name left")
         }
     }
 

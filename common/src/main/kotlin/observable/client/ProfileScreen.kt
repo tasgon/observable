@@ -19,20 +19,24 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
     override fun init() {
         super.init()
 
-        ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)
-            .forEach { Observable.LOGGER.info(it.threadName) }
+//        ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)
+//            .forEach { Observable.LOGGER.info(it.threadName) }
 
         var startBtn = addButton(Button(
             0, height / 2 - 28, 100, 20, TranslatableComponent("text.observable.profile_tps")
         ) {
             Observable.CHANNEL.rawChannel.sendToServer(C2SPacket.InitTPSProfile(duration))
+            val mc = Minecraft.getInstance()
+            if (mc.hasSingleplayerServer()) mc.setScreen(null)
         })
 
         startBtn.x = width / 2 - startBtn.width - 4
 
-        var fpsBtn = addButton(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height, TranslatableComponent("text.observable.profile_fps")) { }) as Button
+        var fpsBtn = addButton(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height,
+                TranslatableComponent("text.observable.profile_fps")) { }) as Button
         fpsBtn.active = false
-        var resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16, fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
+        var resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
+                fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
         var showBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), false) { })
 

@@ -5,5 +5,6 @@ import kotlinx.serialization.Serializable
 
 class S2CPacket {
     @Serializable
-    data class ProfilingResult(val data: ProfilingData)
+    data class ProfilingResult(val data: ProfilingData) {
+    }
 }
