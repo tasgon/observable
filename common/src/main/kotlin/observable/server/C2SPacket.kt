@@ -6,3 +6,6 @@ class C2SPacket {
     @Serializable
     data class InitTPSProfile(val duration: Int)
 }
+
+//@Serializable
+//data class InitTPSProfile(val duration: Int)
