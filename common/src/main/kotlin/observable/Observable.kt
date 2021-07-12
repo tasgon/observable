@@ -26,6 +26,7 @@ import observable.server.Profiler
 import observable.server.S2CPacket
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
+import java.io.Serializable
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.math.roundToInt
@@ -52,7 +53,7 @@ object Observable {
 
     @JvmStatic
     fun init() {
-        CHANNEL.register { t: C2SPacket.InitTPSProfile, supplier ->
+        CHANNEL.register<C2SPacket.InitTPSProfile> { t: C2SPacket.InitTPSProfile, supplier ->
             PROFILER?.startRunning(t.duration)
         }
 
@@ -78,16 +79,6 @@ object Observable {
         ClientTickEvent.CLIENT_POST.register {
             if (PROFILE_KEYBIND.consumeClick()) {
                 it.setScreen(ProfileScreen())
-            }
-        }
-
-        ClientRawInputEvent.MOUSE_SCROLLED.register { mc, dir ->
-            LOGGER.info("scroll")
-            (mc.screen as? ProfileScreen)?.let {
-                it.duration += dir.roundToInt()
-                InteractionResult.CONSUME
-            } ?: run {
-                InteractionResult.PASS
             }
         }
     }

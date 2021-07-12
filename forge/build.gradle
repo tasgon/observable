@@ -18,13 +18,13 @@ loom {
     mixinConfig "mixins.common.json"
 }
 
-//minecraft {
-//    runs {
-//        client {
-//            vmArg "-Dmixin.debug=true"
-//        }
-//    }
-//}
+minecraft {
+    runs {
+        client {
+            vmArg "-Dmixin.debug=true"
+        }
+    }
+}
 
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"

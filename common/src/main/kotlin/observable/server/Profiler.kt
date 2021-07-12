@@ -10,6 +10,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
 import kotlin.concurrent.schedule
+import kotlin.math.roundToInt
 
 class Profiler(val server: ServerLevel) {
     data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)
@@ -17,19 +18,15 @@ class Profiler(val server: ServerLevel) {
     var timingsMap = HashMap<Object, TimingData>()
     var notProcessing = true
 
-    var processing
-        get() = !notProcessing
-        set(value) { notProcessing = !value }
-
     fun process(entity: Object, time: Long) {
-        var timingInfo = timingsMap.getOrDefault(entity, TimingData(0, 0, HashSet()))
+        val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
         timingInfo.time += time
         timingInfo.ticks++
     }
 
     fun startRunning(duration: Int? = null) {
         timingsMap.clear()
-        processing = false
+        notProcessing = false
         duration?.let {
             val durMs = duration.toLong() * 1000L
             Observable.LOGGER.info("Starting profiler for $durMs ms")
@@ -40,9 +37,13 @@ class Profiler(val server: ServerLevel) {
     }
 
     fun stopRunning() {
-        processing = false
-        Observable.LOGGER.info("Profiler done, sending data")
+        notProcessing = true
         val data = ProfilingData(timingsMap)
+        Observable.LOGGER.info("Profiler done, sending data (${data.data.size} (block)entities logged)")
+        data.data.slice(0..5).withIndex().forEach { (idx, v) ->
+            val (obj, timingData) = v
+            Observable.LOGGER.info("$idx: ${obj.className} -- ${(timingData.rate * 1000).roundToInt()} us/t")
+        }
         Observable.CHANNEL.rawChannel.sendToPlayers(server.players(), S2CPacket.ProfilingResult(data))
         Observable.LOGGER.info("Data transfer complete!")
     }
