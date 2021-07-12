@@ -25,7 +25,7 @@ public class LevelMixin {
     @Overwrite
     public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
         try {
-            if (Observable.INSTANCE.getPROFILER() == null) consumer.accept(entity);
+            if (Observable.INSTANCE.getPROFILER().getNotProcessing()) consumer.accept(entity);
             else {
                 long start = System.nanoTime();
                 consumer.accept(entity);
@@ -43,12 +43,12 @@ public class LevelMixin {
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
     public void redirectTick(TickableBlockEntity blockEntity) {
-        if (Observable.INSTANCE.getPROFILER() == null) blockEntity.tick();
+        if (Observable.INSTANCE.getPROFILER().getNotProcessing()) blockEntity.tick();
         else {
             long start = System.nanoTime();
             blockEntity.tick();
             long end = System.nanoTime();
-            Observable.INSTANCE.getPROFILER().process((Entity) blockEntity, end - start);
+            Observable.INSTANCE.getPROFILER().process(blockEntity, end - start);
         }
     }
 }

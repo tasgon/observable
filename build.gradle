@@ -10,6 +10,7 @@ buildscript {
 plugins {
     id "architectury-plugin" version "3.2-SNAPSHOT"
     id "dev.architectury.loom" version "0.7.2-SNAPSHOT" apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.5.20'
 }
 apply plugin: 'kotlin'
 
@@ -30,6 +31,8 @@ subprojects {
         mappings loom.officialMojangMappings()
         // The following line declares the yarn mappings you may select this one as well.
         // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
+        implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2"
+
     }
 
 }

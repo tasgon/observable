@@ -1,11 +1,15 @@
 package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.Checkbox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.TranslatableComponent
+import observable.Observable
+import observable.server.C2SPacket
+import java.lang.management.ManagementFactory
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile")) {
@@ -15,9 +19,14 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
     override fun init() {
         super.init()
 
+        ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)
+            .forEach { Observable.LOGGER.info(it.threadName) }
+
         var startBtn = addButton(Button(
             0, height / 2 - 28, 100, 20, TranslatableComponent("text.observable.profile_tps")
-        ) {  })
+        ) {
+            Observable.CHANNEL.rawChannel.sendToServer(C2SPacket.InitTPSProfile(duration))
+        })
 
         startBtn.x = width / 2 - startBtn.width - 4
 

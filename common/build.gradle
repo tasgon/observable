@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 dependencies {
     // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
