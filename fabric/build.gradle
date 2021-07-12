@@ -15,7 +15,8 @@ architectury {
 minecraft {
     runs {
         client {
-            vmArg "-Dmixin.debug=true"
+//            vmArg "-Dmixin.debug=true"
+//            vmArg "-Djava.library.path=/Users/me/Documents/m1-multimc-hack/lwjglnatives"
         }
     }
 }
