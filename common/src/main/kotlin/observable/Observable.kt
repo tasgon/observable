@@ -1,6 +1,7 @@
 package observable
 
 import com.mojang.blaze3d.platform.InputConstants
+import me.shedaniel.architectury.event.events.GuiEvent
 import me.shedaniel.architectury.event.events.LifecycleEvent
 import me.shedaniel.architectury.event.events.PlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientRawInputEvent
@@ -68,7 +69,7 @@ object Observable {
                         obj.entity?.let { it.javaClass.name } ?:
                         obj.blockEntity?.let { it.javaClass.name } ?:
                         "Unknown class"
-                LOGGER.info("$idx: ${className} -- ${(timingData.rate * 1000).roundToInt()} us/t")
+                LOGGER.info("$idx: $className -- ${(timingData.rate / 1000).roundToInt()} us/t")
             }
         }
 
@@ -103,6 +104,10 @@ object Observable {
             if (PROFILE_KEYBIND.consumeClick()) {
                 it.setScreen(ProfileScreen())
             }
+        }
+
+        GuiEvent.RENDER_HUD.register { stack, v ->
+
         }
     }
 }

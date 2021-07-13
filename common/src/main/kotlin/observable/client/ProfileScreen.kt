@@ -38,7 +38,9 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
         var resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
                 fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
         var showBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
-            20, TranslatableComponent("text.observable.overlay"), false) { })
+            20, TranslatableComponent("text.observable.overlay"), false) {
+
+        })
 
         this.startBtn = startBtn
     }
