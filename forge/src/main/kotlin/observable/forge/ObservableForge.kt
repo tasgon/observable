@@ -2,6 +2,7 @@ package observable.forge
 
 import observable.Observable.init
 import me.shedaniel.architectury.platform.forge.EventBuses
+import me.shedaniel.architectury.utils.GameInstance
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
@@ -19,5 +20,6 @@ class ObservableForge {
 
     fun onClientInit(ev: FMLClientSetupEvent) {
         Observable.clientInit()
+        MinecraftForge.EVENT_BUS.register(ForgeClientHooks)
     }
 }

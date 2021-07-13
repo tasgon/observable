@@ -1,37 +1,21 @@
 package observable
 
+import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
 import me.shedaniel.architectury.event.events.GuiEvent
-import me.shedaniel.architectury.event.events.LifecycleEvent
-import me.shedaniel.architectury.event.events.PlayerEvent
-import me.shedaniel.architectury.event.events.client.ClientRawInputEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
-import me.shedaniel.architectury.networking.NetworkChannel
-import me.shedaniel.architectury.networking.NetworkManager
-import me.shedaniel.architectury.registry.CreativeTabs
-import me.shedaniel.architectury.registry.DeferredRegister
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.registry.Registries
 import net.minecraft.client.KeyMapping
-import net.minecraft.client.Minecraft
-import net.minecraft.core.Registry
-import net.minecraft.network.chat.TextComponent
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.LazyLoadedValue
-import net.minecraft.world.InteractionResult
-import net.minecraft.world.item.CreativeModeTab
-import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
 import observable.client.ProfileScreen
 import observable.net.BetterChannel
-import observable.server.C2SPacket
+import observable.net.C2SPacket
+import observable.net.S2CPacket
 import observable.server.Profiler
-import observable.server.S2CPacket
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import java.io.Serializable
-import java.util.*
-import kotlin.concurrent.schedule
 import kotlin.math.roundToInt
 
 object Observable {
@@ -49,50 +33,39 @@ object Observable {
         InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
 
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
-
     val LOGGER = LogManager.getLogger("Observable")
 
-    var PROFILER: Profiler? = null
+    val PROFILER: Profiler by lazy {
+        Profiler()
+    }
+
+    var RESULTS: ProfilingData? = null
+
+    val PROFILE_SCREEN by lazy {
+        ProfileScreen()
+    }
 
     @JvmStatic
     fun init() {
         CHANNEL.register { t: C2SPacket.InitTPSProfile, supplier ->
-            PROFILER?.startRunning(t.duration)
+            PROFILER.startRunning(t.duration, supplier.get())
+        }
+
+        CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
+            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endNanos)
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingResult, supplier ->
-            val data = t.data.data
-            LOGGER.info("Received profiling result with ${data.size} entries")
-            data.slice(0..5).withIndex().forEach { (idx, v) ->
-                val (obj, timingData) = v
-                val className =
-                        obj.entity?.let { it.javaClass.name } ?:
-                        obj.blockEntity?.let { it.javaClass.name } ?:
-                        "Unknown class"
-                LOGGER.info("$idx: $className -- ${(timingData.rate / 1000).roundToInt()} us/t")
+            RESULTS = t.data
+            PROFILE_SCREEN.apply {
+                action = ProfileScreen.Action.DEFAULT
+                arrayOf(resultsBtn, overlayBtn).forEach { it.active = true }
             }
-        }
-
-        LifecycleEvent.SERVER_WORLD_LOAD.register {
-            PROFILER = Profiler(it)
-            LOGGER.info("Loaded profiler")
-        }
-
-        LifecycleEvent.SERVER_WORLD_UNLOAD.register {
-            PROFILER = null
-            LOGGER.info("Unloaded profiler")
-        }
-
-        PlayerEvent.PLAYER_JOIN.register {
-            PROFILER?.players?.add(it)
-            val name = (it.name as TextComponent).text
-            LOGGER.info("$name joined")
-        }
-
-        PlayerEvent.PLAYER_QUIT.register {
-            PROFILER?.players?.remove(it)
-            val name = (it.name as TextComponent).text
-            LOGGER.info("$name left")
+            val data = t.data.entries
+            LOGGER.info("Received profiling result with ${data.size} entries")
+            data.slice(0..5).withIndex().forEach { (idx, value) ->
+                LOGGER.info("$idx: ${value.entity.asAny?.javaClass?.name} -- ${(value.rate / 1000).roundToInt()} us/t")
+            }
         }
     }
 
@@ -102,7 +75,7 @@ object Observable {
 
         ClientTickEvent.CLIENT_POST.register {
             if (PROFILE_KEYBIND.consumeClick()) {
-                it.setScreen(ProfileScreen())
+                it.setScreen(PROFILE_SCREEN)
             }
         }
 

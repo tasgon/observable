@@ -13,22 +13,27 @@ import observable.server.Profiler
 
 
 @Serializable
-data class ProfilingData(val data: List<Pair<SerializedEntity, SerializedTimingData>>) {
-    constructor(data: Map<Object, Profiler.TimingData>) : this(data.map { (entity, data) ->
-        Pair(SerializedEntity(entity as? Entity, entity as? BlockEntity), SerializedTimingData(data))
+data class ProfilingData(val entries: List<ProfilingData.Entry>) {
+    constructor(data: Map<Any, Profiler.TimingData>) : this(data.map { (entity, data) ->
+        Entry(entity, data)
     }.sortedByDescending {
-        it.second.rate
+        it.rate
     })
 
-    sealed class EntityType {
+    @Serializable
+    data class SerializedEntity(val entity: Entity?, val blockEntity: BlockEntity?, val classname: String) {
+        constructor(obj: Any) : this(obj as? Entity, obj as? BlockEntity, obj.javaClass.name)
+        val asAny get() = entity ?: blockEntity
     }
 
     @Serializable
-    data class SerializedEntity(val entity: Entity?, val blockEntity: BlockEntity?) {
+    data class Entry(val entity: SerializedEntity, val rate: Double, val traces: List<SerializedStackTrace>) {
+        constructor(obj: Any, data: Profiler.TimingData) : this(SerializedEntity(obj),
+            data.time.toDouble() / data.ticks.toDouble(), data.traces.map { SerializedStackTrace(it) })
     }
 
     @Serializable
-    data class SerializedStackTrace(val className: String, val fileName: String?, val lineNumber: Int, val methodName: String) {
+    data class SerializedStackTrace(val classname: String, val fileName: String?, val lineNumber: Int, val methodName: String) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
     }
 
