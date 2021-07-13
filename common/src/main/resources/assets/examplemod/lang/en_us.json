@@ -4,6 +4,7 @@
   "category.observable.keybinds": "Observable",
   "text.observable.profile_tps": "Profile TPS",
   "text.observable.profile_fps": "Profile FPS",
+  "text.observable.unimplemented": "Unimplemented!",
   "text.observable.results": "Results",
   "text.observable.overlay": "Overlay",
   "text.observable.discord": "Contact me"

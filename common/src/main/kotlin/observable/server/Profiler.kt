@@ -1,38 +1,35 @@
 package observable.server
 
 import ProfilingData
-import net.minecraft.client.Minecraft
+import me.shedaniel.architectury.networking.NetworkManager
+import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.network.chat.TextComponent
-import net.minecraft.server.MinecraftServer
-import net.minecraft.server.level.ServerLevel
-import net.minecraft.server.level.ServerPlayer
 import observable.Observable
+import observable.net.S2CPacket
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.concurrent.schedule
-import kotlin.math.roundToInt
 
-class Profiler(val server: ServerLevel) {
+class Profiler {
     data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)
 
-    var timingsMap = HashMap<Object, TimingData>()
+    var timingsMap = HashMap<Any, TimingData>()
     var notProcessing = true
-    var players = ArrayList<ServerPlayer>()
 
-    fun process(entity: Object, time: Long) {
+    fun process(entity: Any, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
         timingInfo.time += time
         timingInfo.ticks++
     }
 
-    fun startRunning(duration: Int? = null) {
+    fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
         timingsMap.clear()
+        val start = System.nanoTime()
         notProcessing = false
         duration?.let {
             val durMs = duration.toLong() * 1000L
-            Observable.LOGGER.info("Starting profiler for $durMs ms")
+            Observable.CHANNEL.sendToPlayers(GameInstance.getServer()!!.playerList.players,
+                S2CPacket.ProfilingStarted(start + durMs * 1000000L))
+            Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
             Timer("Profiler", false).schedule(durMs) {
                 stopRunning()
             }
@@ -42,9 +39,10 @@ class Profiler(val server: ServerLevel) {
     fun stopRunning() {
         notProcessing = true
         val data = ProfilingData(timingsMap)
-        Observable.LOGGER.info("Profiler done, sending data (${data.data.size} (block)entities logged)")
+        val players = GameInstance.getServer()!!.playerList.players
+        Observable.LOGGER.info("Profiler done, sending data (${data.entries.size} (block)entities logged)")
         Observable.LOGGER.info("Found clients ${players.map { (it.name as TextComponent).text }}")
-        Observable.CHANNEL.rawChannel.sendToPlayers(players, S2CPacket.ProfilingResult(data))
+        Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingResult(data))
         Observable.LOGGER.info("Data transfer complete!")
     }
 }
