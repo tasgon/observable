@@ -1,9 +1,14 @@
 package observable.client
 
 import ProfilingData
+import com.mojang.blaze3d.systems.RenderSystem
+import me.shedaniel.architectury.utils.GameInstance
+import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.phys.Vec3
 import observable.Observable
+import org.lwjgl.opengl.GL11
 
 object Overlay {
     data class Color(val r: Double, val g: Double, val b: Double, val a: Double) {
@@ -21,12 +26,14 @@ object Overlay {
         }
         data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
         data class BlockEntityEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate))
-        object InvalidEntry : Entry(getColor(Double.MAX_VALUE))
+
+        operator fun component3() = color
     }
 
     var enabled = false
     var entities = ArrayList<Entry.EntityEntry>()
     var blockEntities = ArrayList<Entry.BlockEntityEntry>()
+    lateinit var loc: Vec3
 
     fun load(data: ProfilingData) {
         listOf(entities, blockEntities).forEach { it.clear() }
@@ -38,13 +45,32 @@ object Overlay {
     }
 
     fun render(partialTicks: Float) {
-        Observable.RESULTS?.let {
-            for (entry in it.entries) {
-            }
+        loc = Minecraft.getInstance().player!!.position()
+
+        for (entry in entities) {
+            drawEntity(entry, partialTicks)
+        }
+
+        for (entry in blockEntities) {
+
         }
     }
 
-    inline fun drawEntity() {
+    inline fun drawEntity(entry: Entry.EntityEntry, partialTicks: Float) {
+        val (entity, rate, color) = entry
+        var pos = entity.position()
+        if (entity.isAlive) pos = pos.add(entity.deltaMovement.scale(partialTicks.toDouble()))
 
+        color.apply {
+            GL11.glColor4d(r, g, b, a)
+        }
+
+        pos.apply {
+            GL11.glVertex3d(x, y, z)
+            GL11.glVertex3d(x, y + 1.5, z)
+        }
+    }
+
+    inline fun drawBlock(entry: Entry.BlockEntityEntry, partialTicks: Float) {
     }
 }
