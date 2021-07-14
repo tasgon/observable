@@ -9,6 +9,7 @@ import me.shedaniel.architectury.registry.Registries
 import net.minecraft.client.KeyMapping
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.LazyLoadedValue
+import observable.client.Overlay
 import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
@@ -35,15 +36,11 @@ object Observable {
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
     val LOGGER = LogManager.getLogger("Observable")
 
-    val PROFILER: Profiler by lazy {
-        Profiler()
-    }
+    val PROFILER: Profiler by lazy { Profiler() }
 
     var RESULTS: ProfilingData? = null
 
-    val PROFILE_SCREEN by lazy {
-        ProfileScreen()
-    }
+    val PROFILE_SCREEN by lazy { ProfileScreen() }
 
     @JvmStatic
     fun init() {
@@ -63,9 +60,7 @@ object Observable {
             }
             val data = t.data.entries
             LOGGER.info("Received profiling result with ${data.size} entries")
-            data.slice(0..5).withIndex().forEach { (idx, value) ->
-                LOGGER.info("$idx: ${value.entity.asAny?.javaClass?.name} -- ${(value.rate / 1000).roundToInt()} us/t")
-            }
+            Overlay.load(t.data)
         }
     }
 

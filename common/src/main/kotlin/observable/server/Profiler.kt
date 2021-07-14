@@ -14,6 +14,7 @@ class Profiler {
 
     var timingsMap = HashMap<Any, TimingData>()
     var notProcessing = true
+    var lastExec = 0L
 
     fun process(entity: Any, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
@@ -22,6 +23,7 @@ class Profiler {
     }
 
     fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
+//        if (!notProcessing || System.nanoTime())
         timingsMap.clear()
         val start = System.nanoTime()
         notProcessing = false

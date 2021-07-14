@@ -36,11 +36,4 @@ data class ProfilingData(val entries: List<ProfilingData.Entry>) {
     data class SerializedStackTrace(val classname: String, val fileName: String?, val lineNumber: Int, val methodName: String) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
     }
-
-    @Serializable
-    data class SerializedTimingData(val rate: Double, val traces: List<SerializedStackTrace>) {
-        constructor(timingData: Profiler.TimingData) :
-                this (timingData.time.toDouble() / timingData.ticks.toDouble(),
-                    timingData.traces.map { SerializedStackTrace(it) })
-    }
 }

@@ -54,7 +54,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
         resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
                 fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
         overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
-            20, TranslatableComponent("text.observable.overlay"), false) {
+            20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
             Overlay.enabled = it
         })
 
@@ -82,8 +82,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
     }
 
     override fun mouseMoved(d: Double, e: Double) {
-        fpsBtn.message =
-            if (fpsBtn.isHovered) unimplementedText else fpsText
+        fpsBtn.message = if (fpsBtn.isHovered) unimplementedText else fpsText
 
         super.mouseMoved(d, e)
     }
