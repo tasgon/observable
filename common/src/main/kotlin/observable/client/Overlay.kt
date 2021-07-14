@@ -1,11 +1,15 @@
 package observable.client
 
 import ProfilingData
+import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
+import net.minecraft.client.player.LocalPlayer
+import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.block.entity.BlockEntity
@@ -34,10 +38,14 @@ object Overlay {
         operator fun component3() = color
     }
 
-    var enabled = false
+    var enabled = true
     var entities = ArrayList<Entry.EntityEntry>()
     var blockEntities = ArrayList<Entry.BlockEntityEntry>()
     lateinit var loc: Vec3
+
+    val font: Font by lazy {
+        Minecraft.getInstance().font
+    }
 
     fun load(data: ProfilingData) {
         listOf(entities, blockEntities).forEach { it.clear() }
@@ -59,9 +67,12 @@ object Overlay {
         if (!enabled) return
 
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
+        val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
         loc = Minecraft.getInstance().player!!.position()
 
         RenderSystem.disableDepthTest()
+        RenderSystem.enableBlend()
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA)
 
         poseStack.pushPose()
 
@@ -70,37 +81,63 @@ object Overlay {
         }
 
         for (entry in entities) {
-            drawEntity(entry, poseStack, partialTicks, camera)
+            drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
         }
 
         for (entry in blockEntities) {
-            drawBlock(entry, partialTicks)
+            drawBlock(entry, poseStack, partialTicks, camera, bufSrc)
         }
 
+        poseStack.popPose()
+        bufSrc.endBatch()
+
         // Cleanup
+        GL11.glEnable(GL11.GL_DEPTH_TEST)
         RenderSystem.enableDepthTest()
     }
 
-    inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack, partialTicks: Float, camera: Camera) {
+    inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
+                          partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
         poseStack.pushPose()
 
         val (entity, rate, color) = entry
-        var text = "${(rate / 1000).roundToInt()} us/t"
+        var text = "${entity.javaClass.simpleName}: ${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
-//        if (entity.isAlive) pos = pos.add(entity.deltaMovement.scale(partialTicks.toDouble()))
-//        else text += " [X]"
+        if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
+            Vec3(x, y.coerceAtLeast(0.0), z)
+        }.scale(partialTicks.toDouble()))
+        else text += " [X]"
 
         val col: Int = -0x1
         pos.apply {
-            poseStack.translate(x, y + 2.0, z)
+            poseStack.translate(x, y + 2.2, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
-            Minecraft.getInstance().font.draw(poseStack, text, 0F, 0F, col)
+            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
+                poseStack.last().pose(), bufSrc, true, 0, 15728880)
         }
 
         poseStack.popPose()
     }
 
-    inline fun drawBlock(entry: Entry.BlockEntityEntry, partialTicks: Float) {
+    inline fun drawBlock(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
+                         partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
+        poseStack.pushPose()
+
+        val (blockEntity, rate, color) = entry
+        var text = "${(rate / 1000).roundToInt()} μs/t"
+        var pos = blockEntity.blockPos
+
+        val col: Int = -0x1
+        val opacity = 0x00FFFFFF;
+        pos.apply {
+            poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
+            poseStack.mulPose(camera.rotation())
+            poseStack.scale(-0.025F, -0.025F, 0.025F)
+            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
+                poseStack.last().pose(), bufSrc, true, 0, 15728880)
+        }
+
+        poseStack.popPose()
     }
 }
