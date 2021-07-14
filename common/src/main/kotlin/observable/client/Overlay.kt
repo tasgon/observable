@@ -110,7 +110,7 @@ object Overlay {
 
         val col: Int = -0x1
         pos.apply {
-            poseStack.translate(x, y + 2.2, z)
+            poseStack.translate(x, y + entity.bbHeight + 0.33, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
