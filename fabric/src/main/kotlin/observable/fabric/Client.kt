@@ -14,7 +14,7 @@ class Client : ClientModInitializer {
         Observable.clientInit()
 
         WorldRenderEvents.LAST.register {
-            Overlay.render(poseStack = it.matrixStack(), partialTicks = it.tickDelta(), camera = it.camera())
+            Overlay.render(poseStack = it.matrixStack(), partialTicks = it.tickDelta())
         }
     }
 }
