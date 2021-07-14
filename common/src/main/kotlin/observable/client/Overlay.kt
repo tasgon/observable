@@ -55,12 +55,19 @@ object Overlay {
         if (invalids > 0) Observable.LOGGER.warn("$invalids invalid entries (${data.entries.size - invalids} remain)")
     }
 
-    fun render(poseStack: PoseStack, partialTicks: Float, camera: Camera) {
+    fun render(poseStack: PoseStack, partialTicks: Float) {
         if (!enabled) return
 
+        val camera = Minecraft.getInstance().gameRenderer.mainCamera
         loc = Minecraft.getInstance().player!!.position()
 
         RenderSystem.disableDepthTest()
+
+        poseStack.pushPose()
+
+        camera.position.apply {
+            poseStack.translate(-x, -y, -z)
+        }
 
         for (entry in entities) {
             drawEntity(entry, poseStack, partialTicks, camera)
@@ -80,14 +87,14 @@ object Overlay {
         val (entity, rate, color) = entry
         var text = "${(rate / 1000).roundToInt()} us/t"
         var pos = entity.position()
-        if (entity.isAlive) pos = pos.add(entity.deltaMovement.scale(partialTicks.toDouble()))
-        else text += " [X]"
+//        if (entity.isAlive) pos = pos.add(entity.deltaMovement.scale(partialTicks.toDouble()))
+//        else text += " [X]"
 
-        poseStack.mulPose(camera.rotation())
-        poseStack.scale(-0.025F, -0.025F, 0.025F)
         val col: Int = -0x1
         pos.apply {
-            poseStack.translate(x, y, z)
+            poseStack.translate(x, y + 2.0, z)
+            poseStack.mulPose(camera.rotation())
+            poseStack.scale(-0.025F, -0.025F, 0.025F)
             Minecraft.getInstance().font.draw(poseStack, text, 0F, 0F, col)
         }
 
