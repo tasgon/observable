@@ -60,7 +60,9 @@ object Observable {
             }
             val data = t.data.entries
             LOGGER.info("Received profiling result with ${data.size} entries")
-            Overlay.load(t.data)
+            synchronized(Overlay) {
+                Overlay.load(t.data)
+            }
         }
     }
 

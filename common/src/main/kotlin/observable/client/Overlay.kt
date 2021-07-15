@@ -3,6 +3,7 @@ package observable.client
 import ProfilingData
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.Camera
@@ -10,6 +11,8 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.player.LocalPlayer
 import net.minecraft.client.renderer.MultiBufferSource
+import net.minecraft.client.renderer.RenderStateShard
+import net.minecraft.client.renderer.RenderType
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.block.entity.BlockEntity
@@ -19,17 +22,17 @@ import org.lwjgl.opengl.GL11
 import kotlin.math.roundToInt
 
 object Overlay {
-    data class Color(val r: Double, val g: Double, val b: Double, val a: Double) {
+    data class Color(val r: Int, val g: Int, val b: Int, val a: Int) {
 
     }
 
     sealed class Entry(val color: Color) {
         companion object {
             fun getColor(rate: Double) = Color(
-                (rate / 100.0).coerceIn(0.0, 1.0),
-                ((100.0 - rate) / 100.0).coerceIn(0.0, 1.0),
-                0.0,
-                (rate / 100.0).coerceIn(0.0, 1.0)
+                (rate / 100.0 * 255).roundToInt().coerceIn(0, 255),
+                ((100.0 - rate) / 100.0 * 255).roundToInt().coerceIn(0, 255),
+                0,
+                (rate / 100.0).roundToInt().coerceIn(0, 255)
             )
         }
         data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
@@ -43,9 +46,8 @@ object Overlay {
     var blockEntities = ArrayList<Entry.BlockEntityEntry>()
     lateinit var loc: Vec3
 
-    val font: Font by lazy {
-        Minecraft.getInstance().font
-    }
+    val font: Font by lazy { Minecraft.getInstance().font }
+    private lateinit var renderType: RenderType
 
     fun load(data: ProfilingData) {
         listOf(entities, blockEntities).forEach { it.clear() }
@@ -66,6 +68,22 @@ object Overlay {
     fun render(poseStack: PoseStack, partialTicks: Float) {
         if (!enabled) return
 
+        @Suppress("INACCESSIBLE_TYPE")
+        renderType = RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
+            RenderType.CompositeState.builder()
+                .setTextureState(RenderStateShard.TextureStateShard())
+                .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
+                .setTransparencyState(
+                    RenderStateShard.TransparencyStateShard("translucent_transparency",
+                        {
+                            RenderSystem.enableBlend()
+                            RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE)
+                        }
+                    ) {
+                        RenderSystem.disableBlend()
+                        RenderSystem.defaultBlendFunc()
+                    }).createCompositeState(true))
+
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
         val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
         loc = Minecraft.getInstance().player!!.position()
@@ -80,12 +98,15 @@ object Overlay {
             poseStack.translate(-x, -y, -z)
         }
 
-        for (entry in entities) {
-            drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
-        }
+        synchronized(this) {
+            for (entry in blockEntities) {
+                drawBlockOutline(entry, poseStack, camera, bufSrc)
+                drawBlock(entry, poseStack, camera, bufSrc)
+            }
 
-        for (entry in blockEntities) {
-            drawBlock(entry, poseStack, partialTicks, camera, bufSrc)
+            for (entry in entities) {
+                drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
+            }
         }
 
         poseStack.popPose()
@@ -119,17 +140,62 @@ object Overlay {
         poseStack.popPose()
     }
 
-    inline fun drawBlock(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
-                         partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
+    private inline fun drawBlockOutline(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
+                                        camera: Camera, bufSrc: MultiBufferSource) {
+        val (blockEntity, _, color) = entry
+        val buf = bufSrc.getBuffer(renderType)
+
+        poseStack.pushPose()
+
+        blockEntity.blockPos.apply {
+            poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble())
+        }
+        val mat = poseStack.last().pose()
+        color.apply {
+            buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 1F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 1F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 1F, 0F).color(r, g, b, a).endVertex()
+
+            buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 1F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 0F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 0F).color(r, g, b, a).endVertex()
+
+            buf.vertex(mat, 1F, 1F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 1F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 0F, 1F).color(r, g, b, a).endVertex()
+
+            buf.vertex(mat, 0F, 1F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 1F).color(r, g, b, a).endVertex()
+
+            buf.vertex(mat, 1F, 0F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 0F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 1F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 1F, 1F).color(r, g, b, a).endVertex()
+
+            buf.vertex(mat, 1F, 0F, 0F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 1F, 0F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 1F).color(r, g, b, a).endVertex()
+            buf.vertex(mat, 0F, 0F, 0F).color(r, g, b, a).endVertex()
+        }
+
+        poseStack.popPose()
+    }
+
+    private inline fun drawBlock(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
+                                 camera: Camera, bufSrc: MultiBufferSource) {
         poseStack.pushPose()
 
         val (blockEntity, rate, color) = entry
-        var text = "${(rate / 1000).roundToInt()} μs/t"
-        var pos = blockEntity.blockPos
+        val text = "${(rate / 1000).roundToInt()} μs/t"
 
         val col: Int = -0x1
         val opacity = 0x00FFFFFF;
-        pos.apply {
+        blockEntity.blockPos.apply {
             poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
