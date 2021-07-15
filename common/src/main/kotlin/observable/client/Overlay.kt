@@ -92,7 +92,6 @@ object Overlay {
         bufSrc.endBatch()
 
         // Cleanup
-        GL11.glEnable(GL11.GL_DEPTH_TEST)
         RenderSystem.enableDepthTest()
     }
 

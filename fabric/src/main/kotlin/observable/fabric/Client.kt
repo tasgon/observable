@@ -13,7 +13,7 @@ class Client : ClientModInitializer {
     override fun onInitializeClient() {
         Observable.clientInit()
 
-        WorldRenderEvents.LAST.register {
+        WorldRenderEvents.END.register {
             Overlay.render(poseStack = it.matrixStack(), partialTicks = it.tickDelta())
         }
     }
