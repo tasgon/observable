@@ -25,21 +25,13 @@ object Observable {
     // We can use this if we don't want to use DeferredRegister
     val REGISTRIES = LazyLoadedValue { Registries.get(MOD_ID) }
 
-    // Registering a new creative tab
-//    val EXAMPLE_TAB: CreativeModeTab = CreativeTabs.create(ResourceLocation(MOD_ID, "example_tab")) { ItemStack(EXAMPLE_ITEM.get()) }
-//    val ITEMS = DeferredRegister.create(MOD_ID, Registry.ITEM_REGISTRY)
-//    val EXAMPLE_ITEM = ITEMS.register("example_item") { Item(Item.Properties().tab(Observable.EXAMPLE_TAB)) }
-
     val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
         InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
 
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
     val LOGGER = LogManager.getLogger("Observable")
-
     val PROFILER: Profiler by lazy { Profiler() }
-
     var RESULTS: ProfilingData? = null
-
     val PROFILE_SCREEN by lazy { ProfileScreen() }
 
     @JvmStatic

@@ -5,26 +5,21 @@ import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
-import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
-import net.minecraft.client.player.LocalPlayer
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
-import net.minecraft.network.chat.TextComponent
+import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import org.lwjgl.opengl.GL11
 import kotlin.math.roundToInt
 
 object Overlay {
-    data class Color(val r: Int, val g: Int, val b: Int, val a: Int) {
-
-    }
+    data class Color(val r: Int, val g: Int, val b: Int, val a: Int)
 
     sealed class Entry(val color: Color) {
         companion object {
@@ -36,7 +31,7 @@ object Overlay {
             )
         }
         data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
-        data class BlockEntityEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate))
+        data class BlockEntityEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate / 1000.0))
 
         operator fun component3() = color
     }
@@ -51,17 +46,25 @@ object Overlay {
 
     fun load(data: ProfilingData) {
         listOf(entities, blockEntities).forEach { it.clear() }
+        val positions = HashMap<BlockPos, Entry.BlockEntityEntry>()
         var invalids = 0
         for (entry in data.entries) {
             when {
                 entry.entity.entity != null -> entities.add(Entry.EntityEntry(entry.entity.entity, entry.rate))
-                entry.entity.blockEntity != null -> blockEntities.add(Entry.BlockEntityEntry(entry.entity.blockEntity, entry.rate))
+                entry.entity.blockEntity != null -> {
+                    val toAdd = Entry.BlockEntityEntry(entry.entity.blockEntity, entry.rate)
+                    val pos = toAdd.blockEntity.blockPos
+                    // Dirty hack to solve duplication issue.
+                    // TODO: investigate why this stuff is getting duplicated
+                    if (toAdd.rate > (positions[pos]?.rate ?: -1.0)) positions.put(pos, toAdd)
+                }
                 else -> {
                     Observable.LOGGER.warn("Invalid Entry: ${entry.entity.classname}")
                     invalids++
                 }
             }
         }
+        positions.values.forEach { blockEntities.add(it) }
         if (invalids > 0) Observable.LOGGER.warn("$invalids invalid entries (${data.entries.size - invalids} remain)")
     }
 
