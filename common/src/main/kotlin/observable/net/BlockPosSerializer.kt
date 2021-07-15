@@ -11,12 +11,6 @@ import net.minecraft.core.BlockPos
 
 class BlockPosSerializer : KSerializer<BlockPos> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("BlockPos", PrimitiveKind.LONG)
-
-    override fun deserialize(decoder: Decoder): BlockPos {
-        return BlockPos.of(decoder.decodeLong())
-    }
-
-    override fun serialize(encoder: Encoder, value: BlockPos) {
-        encoder.encodeLong(value.asLong())
-    }
+    override fun deserialize(decoder: Decoder) = BlockPos.of(decoder.decodeLong())
+    override fun serialize(encoder: Encoder, value: BlockPos) = encoder.encodeLong(value.asLong())
 }

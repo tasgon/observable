@@ -10,7 +10,7 @@ import java.util.*
 import kotlin.concurrent.schedule
 
 class Profiler {
-    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)
+    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)\
 
     var timingsMap = HashMap<Any, TimingData>()
     var notProcessing = true
@@ -23,7 +23,6 @@ class Profiler {
     }
 
     fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
-//        if (!notProcessing || System.nanoTime())
         timingsMap.clear()
         val start = System.nanoTime()
         notProcessing = false
