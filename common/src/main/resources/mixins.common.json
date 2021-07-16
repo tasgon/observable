@@ -4,7 +4,8 @@
   "package": "observable.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "LevelMixin"
+    "LevelMixin",
+    "ServerLevelMixin"
   ],
   "client": [],
   "server": [],

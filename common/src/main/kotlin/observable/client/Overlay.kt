@@ -31,14 +31,14 @@ object Overlay {
             )
         }
         data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
-        data class BlockEntityEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate / 1000.0))
+        data class BlockEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate / 1000.0))
 
         operator fun component3() = color
     }
 
     var enabled = true
     var entities = ArrayList<Entry.EntityEntry>()
-    var blockEntities = ArrayList<Entry.BlockEntityEntry>()
+    var blockEntities = ArrayList<Entry.BlockEntry>()
     lateinit var loc: Vec3
 
     val font: Font by lazy { Minecraft.getInstance().font }
@@ -46,13 +46,13 @@ object Overlay {
 
     fun load(data: ProfilingData) {
         listOf(entities, blockEntities).forEach { it.clear() }
-        val positions = HashMap<BlockPos, Entry.BlockEntityEntry>()
+        val positions = HashMap<BlockPos, Entry.BlockEntry>()
         var invalids = 0
         for (entry in data.entries) {
             when {
                 entry.entity.entity != null -> entities.add(Entry.EntityEntry(entry.entity.entity, entry.rate))
                 entry.entity.blockEntity != null -> {
-                    val toAdd = Entry.BlockEntityEntry(entry.entity.blockEntity, entry.rate)
+                    val toAdd = Entry.BlockEntry(entry.entity.blockEntity, entry.rate)
                     val pos = toAdd.blockEntity.blockPos
                     // Dirty hack to solve duplication issue.
                     // TODO: investigate why this stuff is getting duplicated
@@ -143,7 +143,7 @@ object Overlay {
         poseStack.popPose()
     }
 
-    private inline fun drawBlockOutline(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
+    private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack,
                                         camera: Camera, bufSrc: MultiBufferSource) {
         val (blockEntity, _, color) = entry
         val buf = bufSrc.getBuffer(renderType)
@@ -189,7 +189,7 @@ object Overlay {
         poseStack.popPose()
     }
 
-    private inline fun drawBlock(entry: Entry.BlockEntityEntry, poseStack: PoseStack,
+    private inline fun drawBlock(entry: Entry.BlockEntry, poseStack: PoseStack,
                                  camera: Camera, bufSrc: MultiBufferSource) {
         poseStack.pushPose()
 

@@ -3,21 +3,43 @@ package observable.server
 import ProfilingData
 import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.utils.GameInstance
+import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextComponent
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.material.FluidState
 import observable.Observable
 import observable.net.S2CPacket
 import java.util.*
 import kotlin.concurrent.schedule
 
 class Profiler {
-    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)\
+    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>, var name: String = "")
 
     var timingsMap = HashMap<Any, TimingData>()
+    var blockTimingsMap = HashMap<BlockPos, TimingData>()
     var notProcessing = true
-    var lastExec = 0L
 
     fun process(entity: Any, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
+        timingInfo.time += time
+        timingInfo.ticks++
+    }
+
+    fun processBlock(blockState: BlockState, pos: BlockPos, time: Long) {
+        val timingInfo = blockTimingsMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.block.name.string) }
+        timingInfo.time += time
+        timingInfo.ticks++
+    }
+
+    fun processBlockEntity(blockEntity: BlockEntity, time: Long) {
+        val timingInfo = blockTimingsMap.getOrPut(blockEntity.blockPos) { TimingData(0, 0, HashSet(), blockEntity.blockState.block.name.string) }
+        timingInfo.time += time
+        timingInfo.ticks++
+    }
+
+    fun processFluid(blockState: FluidState, pos: BlockPos, time: Long) {
+        val timingInfo = blockTimingsMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.type.toString()) }
         timingInfo.time += time
         timingInfo.ticks++
     }
