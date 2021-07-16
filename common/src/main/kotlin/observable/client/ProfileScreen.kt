@@ -1,6 +1,7 @@
 package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
+import me.shedaniel.architectury.platform.Platform
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
@@ -51,7 +52,13 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
         fpsBtn = addButton(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height,
                 fpsText) { }) as Button
         fpsBtn.active = false
-        resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
+        var lastY = startBtn.y
+        if (Platform.isForge()) {
+            val eventsBtn = addButton(BetterCheckbox(startBtn.x, lastY + startBtn.height + 4, fpsBtn.x + fpsBtn.width - startBtn.x, 20,
+                TranslatableComponent("text.observable.monitor_events"), false) {})
+            lastY = eventsBtn.y
+        }
+        resultsBtn = addButton(Button(startBtn.x, lastY + startBtn.height + 16,
                 fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
         overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {

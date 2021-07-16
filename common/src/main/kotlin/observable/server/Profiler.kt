@@ -9,15 +9,36 @@ import observable.net.S2CPacket
 import java.util.*
 import kotlin.concurrent.schedule
 
+
+/**
+ * Parameters: duration
+ */
+typealias ProfilerCallback = () -> Unit
+
 class Profiler {
-    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)\
+    companion object {
+
+        private val startCallbacks = ArrayList<ProfilerCallback>()
+        private val endCallbacks = ArrayList<ProfilerCallback>()
+
+        fun onStart(f: ProfilerCallback) = startCallbacks.add(f)
+        fun onEnd(f: ProfilerCallback) = endCallbacks.add(f)
+    }
+    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>)
 
     var timingsMap = HashMap<Any, TimingData>()
+    var eventsMap = HashMap<Class<*>, TimingData>()
     var notProcessing = true
     var lastExec = 0L
 
     fun process(entity: Any, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
+        timingInfo.time += time
+        timingInfo.ticks++
+    }
+
+    fun processEvent(clazz: Class<*>, time: Long) {
+        val timingInfo = eventsMap.getOrPut(clazz) { TimingData(0, 0, HashSet()) }
         timingInfo.time += time
         timingInfo.ticks++
     }
@@ -28,10 +49,12 @@ class Profiler {
         notProcessing = false
         duration?.let {
             val durMs = duration.toLong() * 1000L
+            startCallbacks.forEach { it() }
             Observable.CHANNEL.sendToPlayers(GameInstance.getServer()!!.playerList.players,
                 S2CPacket.ProfilingStarted(start + durMs * 1000000L))
             Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
             Timer("Profiler", false).schedule(durMs) {
+                endCallbacks.forEach { it() }
                 stopRunning()
             }
         }

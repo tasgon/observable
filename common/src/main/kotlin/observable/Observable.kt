@@ -17,7 +17,6 @@ import observable.net.S2CPacket
 import observable.server.Profiler
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import kotlin.math.roundToInt
 
 object Observable {
     const val MOD_ID = "observable"
@@ -25,8 +24,8 @@ object Observable {
     // We can use this if we don't want to use DeferredRegister
     val REGISTRIES = LazyLoadedValue { Registries.get(MOD_ID) }
 
-    val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
-        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
+    private val PROFILE_KEYMAP by lazy { KeyMapping("key.observable.profile",
+        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds") }
 
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
     val LOGGER = LogManager.getLogger("Observable")
@@ -60,10 +59,10 @@ object Observable {
 
     @JvmStatic
     fun clientInit() {
-        KeyBindings.registerKeyBinding(PROFILE_KEYBIND)
+        KeyBindings.registerKeyBinding(PROFILE_KEYMAP)
 
         ClientTickEvent.CLIENT_POST.register {
-            if (PROFILE_KEYBIND.consumeClick()) {
+            if (PROFILE_KEYMAP.consumeClick()) {
                 it.setScreen(PROFILE_SCREEN)
             }
         }
