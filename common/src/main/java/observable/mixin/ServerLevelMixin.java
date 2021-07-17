@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
+import observable.Observable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -17,6 +18,12 @@ public class ServerLevelMixin {
         target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"))
     public void onTickLiquid(FluidState state, Level level, BlockPos pos) {
         state.tick(level, pos);
+//        if (Observable.INSTANCE.getPROFILER().getNotProcessing()) state.tick(level, pos);
+//        else {
+//            long start = System.nanoTime();
+//            state.tick(level, pos);
+//            Observable.INSTANCE.getPROFILER().processFluid(state, pos, System.nanoTime() - start);
+//        }
     }
 
     @Redirect(method = "tickBlock", at = @At(value = "INVOKE",

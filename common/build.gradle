@@ -1,4 +1,5 @@
 plugins {
+    id "com.github.johnrengelman.shadow" version "5.0.0"
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
@@ -9,7 +10,7 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     modApi "me.shedaniel:architectury:${rootProject.architectury_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2"
 }
 
 architectury {
@@ -37,6 +38,17 @@ publishing {
         // Add repositories to publish to here.
     }
 }
+
+shadowJar {
+    dependencies {
+        exclude(dependency {
+            System.out.println(it.moduleName)
+            !it.moduleName.contains("kotlinx-serialization-protobuf")
+        })
+    }
+    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
+}
+
 repositories {
     mavenCentral()
 }

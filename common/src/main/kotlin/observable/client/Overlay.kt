@@ -38,14 +38,30 @@ object Overlay {
 
     var enabled = true
     var entities = ArrayList<Entry.EntityEntry>()
-    var blockEntities = ArrayList<Entry.BlockEntry>()
+    var blocks = ArrayList<Entry.BlockEntry>()
     lateinit var loc: Vec3
 
     val font: Font by lazy { Minecraft.getInstance().font }
-    private lateinit var renderType: RenderType
+    @Suppress("INACCESSIBLE_TYPE")
+    private val renderType: RenderType by lazy {
+        RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
+            RenderType.CompositeState.builder()
+                .setTextureState(RenderStateShard.TextureStateShard())
+                .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
+                .setTransparencyState(
+                    RenderStateShard.TransparencyStateShard("translucent_transparency",
+                        {
+                            RenderSystem.enableBlend()
+                            RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE)
+                        }
+                    ) {
+                        RenderSystem.disableBlend()
+                        RenderSystem.defaultBlendFunc()
+                    }).createCompositeState(true))
+    }
 
     fun load(data: ProfilingData) {
-        listOf(entities, blockEntities).forEach { it.clear() }
+        listOf(entities, blocks).forEach { it.clear() }
         val positions = HashMap<BlockPos, Entry.BlockEntry>()
         var invalids = 0
         for (entry in data.entries) {
@@ -64,32 +80,15 @@ object Overlay {
                 }
             }
         }
-        positions.values.forEach { blockEntities.add(it) }
+        positions.values.forEach { blocks.add(it) }
         if (invalids > 0) Observable.LOGGER.warn("$invalids invalid entries (${data.entries.size - invalids} remain)")
     }
 
     fun render(poseStack: PoseStack, partialTicks: Float) {
         if (!enabled) return
 
-        @Suppress("INACCESSIBLE_TYPE")
-        renderType = RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
-            RenderType.CompositeState.builder()
-                .setTextureState(RenderStateShard.TextureStateShard())
-                .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
-                .setTransparencyState(
-                    RenderStateShard.TransparencyStateShard("translucent_transparency",
-                        {
-                            RenderSystem.enableBlend()
-                            RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE)
-                        }
-                    ) {
-                        RenderSystem.disableBlend()
-                        RenderSystem.defaultBlendFunc()
-                    }).createCompositeState(true))
-
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
         val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
-        loc = Minecraft.getInstance().player!!.position()
 
         RenderSystem.disableDepthTest()
         RenderSystem.enableBlend()
@@ -102,7 +101,7 @@ object Overlay {
         }
 
         synchronized(this) {
-            for (entry in blockEntities) {
+            for (entry in blocks) {
                 drawBlockOutline(entry, poseStack, camera, bufSrc)
                 drawBlock(entry, poseStack, camera, bufSrc)
             }
@@ -124,7 +123,7 @@ object Overlay {
         poseStack.pushPose()
 
         val (entity, rate, color) = entry
-        var text = "${entity.javaClass.simpleName}: ${(rate / 1000).roundToInt()} μs/t"
+        var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
         if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
             Vec3(x, y.coerceAtLeast(0.0), z)

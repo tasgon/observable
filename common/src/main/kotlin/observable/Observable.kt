@@ -22,9 +22,6 @@ import kotlin.math.roundToInt
 object Observable {
     const val MOD_ID = "observable"
 
-    // We can use this if we don't want to use DeferredRegister
-    val REGISTRIES = LazyLoadedValue { Registries.get(MOD_ID) }
-
     val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
         InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
 
@@ -66,10 +63,6 @@ object Observable {
             if (PROFILE_KEYBIND.consumeClick()) {
                 it.setScreen(PROFILE_SCREEN)
             }
-        }
-
-        GuiEvent.RENDER_HUD.register { stack, v ->
-
         }
     }
 }

@@ -37,6 +37,9 @@ dependencies {
         transitive = false
     }
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2") {
+        transitive = false
+    }
 }
 
 processResources {
@@ -50,6 +53,8 @@ processResources {
 shadowJar {
     configurations = [project.configurations.shadowCommon]
     classifier "dev-shadow"
+
+    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
 }
 
 remapJar {

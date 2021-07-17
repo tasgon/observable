@@ -33,7 +33,9 @@ class Profiler {
     }
 
     fun processBlockEntity(blockEntity: BlockEntity, time: Long) {
-        val timingInfo = blockTimingsMap.getOrPut(blockEntity.blockPos) { TimingData(0, 0, HashSet(), blockEntity.blockState.block.name.string) }
+        val timingInfo = blockTimingsMap.getOrPut(blockEntity.blockPos) {
+            TimingData(0, 0, HashSet(), blockEntity.blockState.block.name.string)
+        }
         timingInfo.time += time
         timingInfo.ticks++
     }

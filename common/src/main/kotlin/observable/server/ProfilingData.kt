@@ -1,5 +1,5 @@
 @file:UseSerializers(EntitySerializer::class,
-        BlockEntitySerializer::class)
+        BlockEntitySerializer::class, BlockPosSerializer::class)
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -36,4 +36,7 @@ data class ProfilingData(val entries: List<ProfilingData.Entry>) {
     data class SerializedStackTrace(val classname: String, val fileName: String?, val lineNumber: Int, val methodName: String) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
     }
+
+    @Serializable
+    data class DimBlockPos(val pos: BlockPos)
 }
