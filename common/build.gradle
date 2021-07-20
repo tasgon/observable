@@ -9,8 +9,6 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     // Remove the next line if you don't want to depend on the API
     modApi "me.shedaniel:architectury:${rootProject.architectury_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2"
 }
 
 architectury {
@@ -39,15 +37,15 @@ publishing {
     }
 }
 
-shadowJar {
-    dependencies {
-        exclude(dependency {
-            System.out.println(it.moduleName)
-            !it.moduleName.contains("kotlinx-serialization-protobuf")
-        })
-    }
-    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
-}
+//shadowJar {
+//    dependencies {
+//        exclude(dependency {
+//            System.out.println(it.moduleName)
+//            !it.moduleName.contains("kotlinx-serialization-protobuf")
+//        })
+//    }
+//    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
+//}
 
 repositories {
     mavenCentral()

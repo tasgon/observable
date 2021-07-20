@@ -7,7 +7,11 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.components.ObjectSelectionList
 import net.minecraft.world.entity.Entity
 
-class EntityList {
+class EntityList(minecraft: Minecraft?, x: Int, y: Int, width: Int, height: Int, m: Int) : ObjectSelectionList<EntityList.EntryBase>(minecraft, x, y,
+    width,
+    height,
+    m
+) {
 //    class EntityEntry() : EntryBase() {
 //
 //    }

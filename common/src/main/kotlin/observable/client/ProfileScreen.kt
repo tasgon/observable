@@ -10,7 +10,7 @@ import observable.Observable
 import observable.net.C2SPacket
 import kotlin.math.roundToInt
 
-class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile")) {
+class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
@@ -52,7 +52,9 @@ class ProfileScreen : Screen(TranslatableComponent("screen,observable.profile"))
                 fpsText) { }) as Button
         fpsBtn.active = false
         resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
-                fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) { })
+                fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) {
+            Minecraft.getInstance().setScreen(ResultsScreen())
+        })
         overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
             Overlay.enabled = it

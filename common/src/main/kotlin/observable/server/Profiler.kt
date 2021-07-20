@@ -5,6 +5,8 @@ import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextComponent
+import net.minecraft.resources.ResourceKey
+import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
@@ -17,7 +19,7 @@ class Profiler {
     data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>, var name: String = "")
 
     var timingsMap = HashMap<Any, TimingData>()
-    var blockTimingsMap = HashMap<BlockPos, TimingData>()
+    var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
     var notProcessing = true
 
     fun process(entity: Any, time: Long) {
@@ -26,22 +28,25 @@ class Profiler {
         timingInfo.ticks++
     }
 
-    fun processBlock(blockState: BlockState, pos: BlockPos, time: Long) {
-        val timingInfo = blockTimingsMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.block.name.string) }
+    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level, time: Long) {
+        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+        val timingInfo = blockMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.block.name.string) }
         timingInfo.time += time
         timingInfo.ticks++
     }
 
-    fun processBlockEntity(blockEntity: BlockEntity, time: Long) {
-        val timingInfo = blockTimingsMap.getOrPut(blockEntity.blockPos) {
+    fun processBlockEntity(blockEntity: BlockEntity, level: Level, time: Long) {
+        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+        val timingInfo = blockMap.getOrPut(blockEntity.blockPos) {
             TimingData(0, 0, HashSet(), blockEntity.blockState.block.name.string)
         }
         timingInfo.time += time
         timingInfo.ticks++
     }
 
-    fun processFluid(blockState: FluidState, pos: BlockPos, time: Long) {
-        val timingInfo = blockTimingsMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.type.toString()) }
+    fun processFluid(blockState: FluidState, pos: BlockPos, level: Level, time: Long) {
+        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+        val timingInfo = blockMap.getOrPut(pos) { TimingData(0, 0, HashSet(), blockState.type.toString()) }
         timingInfo.time += time
         timingInfo.ticks++
     }

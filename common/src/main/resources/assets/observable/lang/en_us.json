@@ -1,5 +1,6 @@
 {
   "screen.observable.profile": "Profile",
+  "screen.observable.results": "Results",
   "key.observable.profile": "Show profiler screen",
   "category.observable.keybinds": "Observable",
   "text.observable.profile_tps": "Profile TPS",

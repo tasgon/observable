@@ -13,7 +13,7 @@ import observable.server.Profiler
 
 
 @Serializable
-data class ProfilingData(val entries: List<ProfilingData.Entry>) {
+data class ProfilingData(val entries: List<Entry>) {
     constructor(data: Map<Any, Profiler.TimingData>) : this(data.map { (entity, data) ->
         Entry(entity, data)
     }.sortedByDescending {

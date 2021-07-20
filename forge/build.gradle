@@ -40,7 +40,6 @@ dependencies {
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) {
         transitive = false
     }
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2") {
         transitive = false
     }
