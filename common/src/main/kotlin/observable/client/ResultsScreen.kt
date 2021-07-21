@@ -10,8 +10,10 @@ import imgui.impl.gl.ImplGL3
 import imgui.impl.glfw.ImplGlfw
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
+import observable.net.C2SPacket
 import uno.glfw.GlfwWindow
 import kotlin.math.roundToInt
 
@@ -109,18 +111,26 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                     data.entries
                         .filter { it.entity.asAny != null }
                         .filter { filterText in it.entity.classname.lowercase() }.forEach {
-                        treeNode(it.entity.classname) {
+                            treeNode(it.entity.classname) {
 
+                            }
+                            ImGui.nextColumn()
+
+                            ImGui.text("${(it.rate / 1000).roundToInt()} us/t")
+                            ImGui.nextColumn()
+                            it.entity.entity?.let { entity ->
+                                withId(entity) {
+                                    button("Visit") {
+                                        val pos = with(entity.position()) {
+                                            BlockPos(x.roundToInt(), y.roundToInt(), z.roundToInt())
+                                        }
+                                        Observable.LOGGER.info("Requesting teleport to $pos")
+                                        Observable.CHANNEL.sendToServer(C2SPacket.RequestTeleport(null, pos))
+                                    }
+                                }
+                            }
+                            ImGui.nextColumn()
                         }
-                        ImGui.nextColumn()
-
-                        ImGui.text("${(it.rate / 1000).roundToInt()} us/t")
-                        ImGui.nextColumn()
-                        button("Visit") {
-
-                        }
-                        ImGui.nextColumn()
-                    }
                 }
                 ImGui.columns(1)
             }

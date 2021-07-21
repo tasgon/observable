@@ -2,11 +2,13 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
+import glm_.d
 import me.shedaniel.architectury.event.events.GuiEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.registry.Registries
 import net.minecraft.client.KeyMapping
+import net.minecraft.network.chat.TextComponent
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.LazyLoadedValue
 import observable.client.Overlay
@@ -35,6 +37,15 @@ object Observable {
     fun init() {
         CHANNEL.register { t: C2SPacket.InitTPSProfile, supplier ->
             PROFILER.startRunning(t.duration, supplier.get())
+        }
+
+        CHANNEL.register { t: C2SPacket.RequestTeleport, supplier ->
+            val player = supplier.get().player
+            LOGGER.info("Receive request from ${(player.name as TextComponent).text} to go to $t")
+            t.pos?.apply {
+                LOGGER.info("Setting to ($x, $y, $z)")
+                player.moveTo(x.toDouble(), y.toDouble(), z.toDouble())
+            }
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
