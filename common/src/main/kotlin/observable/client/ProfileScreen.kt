@@ -42,8 +42,6 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         ) {
             val duration = (action as Action.NewProfile).duration
             Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration))
-            val mc = Minecraft.getInstance()
-            if (mc.hasSingleplayerServer()) mc.setScreen(null)
         })
 
         startBtn.x = width / 2 - startBtn.width - 4
@@ -66,6 +64,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             }
         }
     }
+
+    override fun isPauseScreen() = false
 
     override fun render(poseStack: PoseStack, i: Int, j: Int, f: Float) {
         GuiComponent.drawCenteredString(poseStack, this.font, action.statusMsg,

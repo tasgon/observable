@@ -120,9 +120,11 @@ object Overlay {
 
     inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
                           partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
-        poseStack.pushPose()
-
         val (entity, rate, color) = entry
+        if (entity == Minecraft.getInstance().player
+            && entity.deltaMovement.lengthSqr() > .05) return
+
+        poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
         if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
