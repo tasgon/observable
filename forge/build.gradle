@@ -31,7 +31,7 @@ dependencies {
     // Remove the next line if you don't want to depend on the API
     modApi "me.shedaniel:architectury-forge:${rootProject.architectury_version}"
 
-    implementation(project(path: ":common", configuration: "shadow")) {
+    implementation(project(path: ":common")) {
         transitive = false
     }
     developmentForge(project(path: ":common")) {

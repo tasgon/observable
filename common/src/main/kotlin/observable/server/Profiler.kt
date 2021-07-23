@@ -3,9 +3,11 @@ package observable.server
 import ProfilingData
 import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.utils.GameInstance
+import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.resources.ResourceKey
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
@@ -18,11 +20,13 @@ import kotlin.concurrent.schedule
 class Profiler {
     data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>, var name: String = "")
 
-    var timingsMap = HashMap<Any, TimingData>()
+    var timingsMap = HashMap<Entity, TimingData>()
+    // TODO: consider splitting out block entity timings
+//    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
     var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
     var notProcessing = true
 
-    fun process(entity: Any, time: Long) {
+    fun process(entity: Entity, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
         timingInfo.time += time
         timingInfo.ticks++
@@ -35,8 +39,13 @@ class Profiler {
         timingInfo.ticks++
     }
 
-    fun processBlockEntity(blockEntity: BlockEntity, level: Level, time: Long) {
-        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+    fun processBlockEntity(blockEntity: BlockEntity, time: Long) {
+        if (blockEntity.level == null) {
+            Observable.LOGGER.warn("Block entity at ${blockEntity.blockPos} has no associated dimension")
+            return
+        }
+
+        val blockMap = blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
         val timingInfo = blockMap.getOrPut(blockEntity.blockPos) {
             TimingData(0, 0, HashSet(), blockEntity.blockState.block.name.string)
         }
@@ -68,9 +77,9 @@ class Profiler {
 
     fun stopRunning() {
         notProcessing = true
-        val data = ProfilingData(timingsMap)
+        val data = ProfilingData(timingsMap, blockTimingsMap)
         val players = GameInstance.getServer()!!.playerList.players
-        Observable.LOGGER.info("Profiler done, sending data (${data.entries.size} (block)entities logged)")
+        Observable.LOGGER.info("Profiler done, sending data (${data.entities.size} (block)entities logged)")
         Observable.LOGGER.info("Found clients ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingResult(data))
         Observable.LOGGER.info("Data transfer complete!")

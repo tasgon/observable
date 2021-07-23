@@ -49,7 +49,7 @@ public class LevelMixin {
             long start = System.nanoTime();
             blockEntity.tick();
             long end = System.nanoTime();
-            Observable.INSTANCE.getPROFILER().process(blockEntity, end - start);
+            Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity, end - start);
         }
     }
 }

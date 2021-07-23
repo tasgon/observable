@@ -2,7 +2,6 @@ package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
 import imgui.ImGui
-import imgui.WindowFlag
 import imgui.cStr
 import imgui.classes.Context
 import imgui.dsl
@@ -12,6 +11,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.resources.ResourceLocation
 import observable.Observable
 import observable.net.C2SPacket
 import uno.glfw.GlfwWindow
@@ -41,15 +41,51 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
-    var resultsOpen
+    var alwaysOpen
         get() = true
         set(i) {}
 
     val filterBuf = ByteArray(256)
     val filterText get() = filterBuf.cStr
 
+    sealed class ResultsEntry(val type: String, val rate: Double) {
+        class EntityEntry(val id: Int, type: String, rate: Double) : ResultsEntry(type, rate)
+        class BlockEntry(val pos: BlockPos, type: String, rate: Double) : ResultsEntry(type, rate)
+
+        fun requestTP(level: ResourceLocation) {
+            val req = C2SPacket.RequestTeleport(level,
+                (this as? EntityEntry)?.id, (this as? BlockEntry)?.pos)
+            Observable.CHANNEL.sendToServer(req)
+        }
+    }
+
+    var entryMap = HashMap<ResourceLocation, List<ResultsEntry>>()
+    var dimTimingsMap = HashMap<ResourceLocation, Double>()
+    lateinit var typeTimingsMap: List<Pair<String, Double>>
+
+    fun loadData() {
+        entryMap.clear()
+        dimTimingsMap.clear()
+        Observable.RESULTS?.let { data ->
+            (data.entities.keys + data.blocks.keys).forEach {
+                val list: MutableList<ResultsEntry> = mutableListOf()
+                data.entities[it]?.map { ResultsEntry.EntityEntry(it.obj, it.type, it.rate) }?.let { list += it }
+                data.blocks[it]?.map { ResultsEntry.BlockEntry(it.obj, it.type, it.rate) }?.let { list += it }
+
+                entryMap[it] = list.sortedByDescending { it.rate }
+                dimTimingsMap[it] = list.sumOf { it.rate }
+            }
+        }
+
+        typeTimingsMap = entryMap.values.flatten().groupBy { it.type }.mapValues { (_, value) ->
+            value.sumOf { it.rate }
+        }.toList().sortedByDescending { it.second }
+    }
+
     override fun init() {
         ResultsScreen.initCtx(true)
+
+        loadData()
 
         Observable.LOGGER.info("Init results")
         super.init()
@@ -100,40 +136,52 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
         ImGui.newFrame()
 
-        ImGui.showDemoWindow(booleanArrayOf(true))
+//        ImGui.showDemoWindow(booleanArrayOf(true))
 
         with(dsl) {
-            window("Results", ::resultsOpen, WindowFlag.None.i) {
+            window("Individual Results", ::alwaysOpen) {
                 ImGui.inputText("Filter", filterBuf)
-                ImGui.columns(3, "resCol", false)
-                ImGui.setColumnWidth(0, ImGui.windowWidth * .7F)
-                Observable.RESULTS?.let { data ->
-                    data.entries
-                        .filter { it.entity.asAny != null }
-                        .filter { filterText in it.entity.classname.lowercase() }.forEach {
-                            treeNode(it.entity.classname) {
+                val width = ImGui.windowWidth
+                entryMap.forEach { (dim, vals) ->
+                    val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase() }
+                    collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                            " (${filtered.size} items)") {
+                        ImGui.columns(3, "resCol", false)
+                        ImGui.setColumnWidth(0, width * .5F)
 
-                            }
+                        filtered.forEach {
+                            ImGui.text(it.type)
                             ImGui.nextColumn()
-
                             ImGui.text("${(it.rate / 1000).roundToInt()} us/t")
                             ImGui.nextColumn()
-                            it.entity.entity?.let { entity ->
-                                withId(entity) {
-                                    button("Visit") {
-                                        val pos = with(entity.position()) {
-                                            BlockPos(x.roundToInt(), y.roundToInt(), z.roundToInt())
-                                        }
-                                        Observable.LOGGER.info("Requesting teleport to $pos")
-                                        Observable.CHANNEL.sendToServer(C2SPacket.RequestTeleport(null, pos))
-                                    }
+                            withId(it) {
+                                button("Visit") {
+                                    it.requestTP(dim)
                                 }
                             }
                             ImGui.nextColumn()
                         }
+
+                        ImGui.columns(1)
+                    }
+                }
+            }
+
+            window("Aggregated Results", ::alwaysOpen) {
+                ImGui.columns(2, "aggResCol", false)
+                ImGui.setColumnWidth(0, ImGui.windowWidth * .8F)
+                typeTimingsMap.forEach { (type, rate) ->
+                    ImGui.text(type)
+                    ImGui.nextColumn()
+                    ImGui.text("${(rate / 1000).roundToInt()} us/t")
+                    ImGui.nextColumn()
                 }
                 ImGui.columns(1)
             }
+
+//            window("By Chunks", ::alwaysOpen) {
+//
+//            }
         }
 
         ImGui.render()

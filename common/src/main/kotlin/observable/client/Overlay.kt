@@ -1,6 +1,5 @@
 package observable.client
 
-import ProfilingData
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
@@ -13,7 +12,6 @@ import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.phys.Vec3
 import observable.Observable
 import kotlin.math.roundToInt
@@ -31,7 +29,7 @@ object Overlay {
             )
         }
         data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
-        data class BlockEntry(val blockEntity: BlockEntity, val rate: Double) : Entry(getColor(rate / 1000.0))
+        data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(getColor(rate / 1000.0))
 
         operator fun component3() = color
     }
@@ -60,28 +58,20 @@ object Overlay {
                     }).createCompositeState(true))
     }
 
-    fun load(data: ProfilingData) {
+    fun load() {
+        val data = Observable.RESULTS ?: return
+        val level = Minecraft.getInstance().level ?: return
+        val levelLocation = level.dimension().location()
         listOf(entities, blocks).forEach { it.clear() }
         val positions = HashMap<BlockPos, Entry.BlockEntry>()
-        var invalids = 0
-        for (entry in data.entries) {
-            when {
-                entry.entity.entity != null -> entities.add(Entry.EntityEntry(entry.entity.entity, entry.rate))
-                entry.entity.blockEntity != null -> {
-                    val toAdd = Entry.BlockEntry(entry.entity.blockEntity, entry.rate)
-                    val pos = toAdd.blockEntity.blockPos
-                    // Dirty hack to solve duplication issue.
-                    // TODO: investigate why this stuff is getting duplicated
-                    if (toAdd.rate > (positions[pos]?.rate ?: -1.0)) positions.put(pos, toAdd)
-                }
-                else -> {
-                    Observable.LOGGER.warn("Invalid Entry: ${entry.entity.classname}")
-                    invalids++
-                }
+        data.entities[levelLocation]?.forEach { entry ->
+            level.getEntity(entry.obj)?.let {
+                entities.add(Entry.EntityEntry(it, entry.rate))
             }
         }
-        positions.values.forEach { blocks.add(it) }
-        if (invalids > 0) Observable.LOGGER.warn("$invalids invalid entries (${data.entries.size - invalids} remain)")
+        data.blocks[levelLocation]?.forEach { entry ->
+            blocks.add(Entry.BlockEntry(entry.obj, entry.rate))
+        }
     }
 
     fun render(poseStack: PoseStack, partialTicks: Float) {
@@ -121,8 +111,8 @@ object Overlay {
     inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
                           partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
         val (entity, rate, color) = entry
-        if (entity == Minecraft.getInstance().player
-            && entity.deltaMovement.lengthSqr() > .05) return
+        if (entity.removed || (entity == Minecraft.getInstance().player
+            && entity.deltaMovement.lengthSqr() > .05)) return
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
@@ -138,7 +128,7 @@ object Overlay {
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
-                poseStack.last().pose(), bufSrc, true, 0, 15728880)
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
         }
 
         poseStack.popPose()
@@ -146,12 +136,12 @@ object Overlay {
 
     private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack,
                                         camera: Camera, bufSrc: MultiBufferSource) {
-        val (blockEntity, _, color) = entry
+        val (pos, _, color) = entry
         val buf = bufSrc.getBuffer(renderType)
 
         poseStack.pushPose()
 
-        blockEntity.blockPos.apply {
+        pos.apply {
             poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble())
         }
         val mat = poseStack.last().pose()
@@ -194,17 +184,17 @@ object Overlay {
                                  camera: Camera, bufSrc: MultiBufferSource) {
         poseStack.pushPose()
 
-        val (blockEntity, rate, color) = entry
+        val (pos, rate, color) = entry
         val text = "${(rate / 1000).roundToInt()} μs/t"
 
         val col: Int = -0x1
         val opacity = 0x00FFFFFF;
-        blockEntity.blockPos.apply {
+        pos.apply {
             poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
-                poseStack.last().pose(), bufSrc, true, 0, 15728880)
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
         }
 
         poseStack.popPose()
