@@ -10,4 +10,4 @@ TODO:
 
 - Fix the jar shadowing to bundle in the imgui libraries
 - Fix the 3 us/t overhead I probably introduced in the last commit
-- Fix the in-game overlay not updating when the player switched dimensions
+- Fix the in-game overlay not updating when the player switches dimensions
