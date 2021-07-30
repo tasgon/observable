@@ -23,6 +23,12 @@ subprojects {
 
     loom {
         silentMojangMappingsLicense()
+
+        runs {
+            server {
+                serverWithGui()
+            }
+        }
     }
 
     dependencies {

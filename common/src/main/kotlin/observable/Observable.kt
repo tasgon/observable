@@ -24,8 +24,8 @@ import org.lwjgl.glfw.GLFW
 object Observable {
     const val MOD_ID = "observable"
 
-    val PROFILE_KEYBIND = KeyMapping("key.observable.profile",
-        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds")
+    val PROFILE_KEYBIND by lazy { KeyMapping("key.observable.profile",
+        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds") }
 
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
     val LOGGER = LogManager.getLogger("Observable")
@@ -105,6 +105,7 @@ object Observable {
         }
 
         ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
+            PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
             synchronized(Overlay) {
                 Overlay.load()
             }
