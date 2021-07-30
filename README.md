@@ -8,6 +8,6 @@ No builds yet, as there are still a few things to fix.
 
 TODO:
 
-- Fix the jar shadowing to bundle in the imgui libraries
+- ~~Fix the jar shadowing to bundle in the imgui libraries~~
 - Fix the 3 us/t overhead I probably introduced in the last commit
 - Fix the in-game overlay not updating when the player switches dimensions
