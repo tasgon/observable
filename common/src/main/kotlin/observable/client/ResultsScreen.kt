@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation
 import observable.Observable
 import observable.net.C2SPacket
 import uno.glfw.GlfwWindow
+import java.lang.Exception
 import kotlin.math.roundToInt
 
 class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")) {
@@ -143,7 +144,9 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.inputText("Filter", filterBuf)
                 val width = ImGui.windowWidth
                 entryMap.forEach { (dim, vals) ->
-                    val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase() }
+                    val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase()
+                            && it.rate > Settings.minRate
+                    }
                     collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
                             " (${filtered.size} items)") {
                         ImGui.columns(3, "resCol", false)
@@ -179,9 +182,15 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.columns(1)
             }
 
-//            window("By Chunks", ::alwaysOpen) {
-//
-//            }
+            window("Settings", ::alwaysOpen) {
+                with(Settings) {
+                    try {
+                        ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
+                    } catch (e: Exception) {
+                        ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
+                    }
+                }
+            }
         }
 
         ImGui.render()

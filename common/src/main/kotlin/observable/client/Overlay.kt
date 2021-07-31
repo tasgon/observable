@@ -63,13 +63,13 @@ object Overlay {
         val level = Minecraft.getInstance().level ?: return
         val levelLocation = level.dimension().location()
         listOf(entities, blocks).forEach { it.clear() }
-        val positions = HashMap<BlockPos, Entry.BlockEntry>()
-        data.entities[levelLocation]?.forEach { entry ->
+        data.entities[levelLocation]?.filter { it.rate > Settings.minRate }?.forEach { entry ->
             level.getEntity(entry.obj)?.let {
                 entities.add(Entry.EntityEntry(it, entry.rate))
             }
         }
-        data.blocks[levelLocation]?.forEach { entry ->
+
+        data.blocks[levelLocation]?.filter { it.rate > Settings.minRate }?.forEach { entry ->
             blocks.add(Entry.BlockEntry(entry.obj, entry.rate))
         }
     }
