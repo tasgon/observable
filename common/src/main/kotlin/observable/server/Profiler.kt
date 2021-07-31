@@ -85,8 +85,9 @@ class Profiler {
 
     fun stopRunning() {
         notProcessing = true
-        val data = ProfilingData(timingsMap, blockTimingsMap)
         val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
+        Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
+        val data = ProfilingData(timingsMap, blockTimingsMap)
         Observable.LOGGER.info("Profiler done, sending data (${data.entities.size} (block)entities logged)")
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingResult(data))

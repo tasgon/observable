@@ -78,12 +78,18 @@ object Observable {
 
         CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endNanos)
+            PROFILE_SCREEN.startBtn.active = false
+        }
+
+        CHANNEL.register { t: S2CPacket.ProfilingCompleted, supplier ->
+            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerCompleted
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingResult, supplier ->
             RESULTS = t.data
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
+                startBtn.active = true
                 arrayOf(resultsBtn, overlayBtn).forEach { it.active = true }
             }
             val data = t.data.entities

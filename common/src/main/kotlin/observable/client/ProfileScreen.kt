@@ -17,11 +17,13 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         }
         data class NewProfile(var duration: Int) : Action()
         data class TPSProfilerRunning(val endTime: Long) : Action()
+        object TPSProfilerCompleted : Action()
 
         val statusMsg get() = when (this) {
             is NewProfile -> "Duration (scroll): $duration seconds"
             is TPSProfilerRunning -> "Running for another %.1f seconds"
                 .format(((endTime - System.nanoTime()).toDouble() / 1e9).coerceAtLeast(0.0) )
+            is TPSProfilerCompleted -> "Profiling finished, please wait..."
         }
     }
 
@@ -43,6 +45,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             val duration = (action as Action.NewProfile).duration
             Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration))
         })
+        startBtn.active = action is Action.NewProfile
 
         startBtn.x = width / 2 - startBtn.width - 4
 

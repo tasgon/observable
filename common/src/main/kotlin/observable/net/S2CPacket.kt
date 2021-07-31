@@ -9,5 +9,8 @@ class S2CPacket {
     data class ProfilingStarted(val endNanos: Long)
 
     @Serializable
+    object ProfilingCompleted
+
+    @Serializable
     data class ProfilingResult(val data: ProfilingData)
 }
