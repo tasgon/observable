@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
+import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
@@ -30,15 +31,17 @@ object Overlay {
                 (rate / 100.0).roundToInt().coerceIn(0, 255)
             )
         }
-        data class EntityEntry(val entity: Entity, val rate: Double) : Entry(getColor(rate))
+        data class EntityEntry(val entityId: Int, val rate: Double) : Entry(getColor(rate)) {
+            val entity get() = Minecraft.getInstance().level?.getEntity(entityId)
+        }
         data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(getColor(rate / 1000.0))
 
         operator fun component3() = color
     }
 
     var enabled = true
-    var entities = ArrayList<Entry.EntityEntry>()
-    var blocks = ArrayList<Entry.BlockEntry>()
+    var entities: List<Entry.EntityEntry> = ArrayList()
+    var blocks: List<Entry.BlockEntry> = ArrayList()
     lateinit var loc: Vec3
 
     val font: Font by lazy { Minecraft.getInstance().font }
@@ -64,16 +67,17 @@ object Overlay {
         val data = Observable.RESULTS ?: return
         val level = lvl ?: Minecraft.getInstance().level ?: return
         val levelLocation = level.dimension().location()
-        listOf(entities, blocks).forEach { it.clear() }
-        data.entities[levelLocation]?.filter { it.rate > Settings.minRate }?.forEach { entry ->
-            level.getEntity(entry.obj)?.let {
-                entities.add(Entry.EntityEntry(it, entry.rate))
-            }
-        }
+        entities = data.entities[levelLocation]?.filter { it.rate > Settings.minRate }?.map {
+            Entry.EntityEntry(it.obj, it.rate)
+        }.orEmpty()
 
-        data.blocks[levelLocation]?.filter { it.rate > Settings.minRate }?.forEach { entry ->
-            blocks.add(Entry.BlockEntry(entry.obj, entry.rate))
-        }
+        blocks = data.blocks[levelLocation]?.filter { it.rate > Settings.minRate }?.map {
+            Entry.BlockEntry(it.obj, it.rate)
+        }.orEmpty()
+    }
+
+    inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) {
+        this.load(lvl)
     }
 
     fun render(poseStack: PoseStack, partialTicks: Float) {
@@ -94,6 +98,7 @@ object Overlay {
 
         synchronized(this) {
             for (entry in blocks) {
+                if (camera.blockPosition.distSqr(entry.pos) > Settings.maxDist.pow(2)) continue
                 drawBlockOutline(entry, poseStack, camera, bufSrc)
                 drawBlock(entry, poseStack, camera, bufSrc)
             }
@@ -112,13 +117,15 @@ object Overlay {
 
     inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
                           partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
-        val (entity, rate, color) = entry
+        val rate = entry.rate
+        val entity = entry.entity ?: return
         if (entity.removed || (entity == Minecraft.getInstance().player
             && entity.deltaMovement.lengthSqr() > .05)) return
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
+        if (camera.position.distanceTo(pos) > Settings.maxDist) return
         if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
             Vec3(x, y.coerceAtLeast(0.0), z)
         }.scale(partialTicks.toDouble()))

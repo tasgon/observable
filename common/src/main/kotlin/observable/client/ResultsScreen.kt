@@ -186,6 +186,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 with(Settings) {
                     try {
                         ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
+                        ImGui.inputInt("Maximum distance (m)", ::maxDist)
                     } catch (e: Exception) {
                         ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
                     }

@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
 import observable.Observable
+import observable.Props
 import observable.net.S2CPacket
 import java.util.*
 import kotlin.concurrent.schedule
@@ -25,7 +26,11 @@ class Profiler {
     // TODO: consider splitting out block entity timings
 //    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
     var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
-    var notProcessing = true
+    var notProcessing
+        get() = Props.notProcessing
+        set(v) {
+            Props.notProcessing = v
+        }
 
     var player: ServerPlayer? = null
 
@@ -71,7 +76,9 @@ class Profiler {
         player = ctx.player as? ServerPlayer
         timingsMap.clear()
         val start = System.nanoTime()
-        notProcessing = false
+        synchronized(Props.notProcessing) {
+            notProcessing = false
+        }
         duration?.let {
             val durMs = duration.toLong() * 1000L
             Observable.CHANNEL.sendToPlayers(GameInstance.getServer()!!.playerList.players,
@@ -84,7 +91,9 @@ class Profiler {
     }
 
     fun stopRunning() {
-        notProcessing = true
+        synchronized(Props.notProcessing) {
+            notProcessing = true
+        }
         val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
         val data = ProfilingData(timingsMap, blockTimingsMap)

@@ -9,6 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.TickableBlockEntity;
 import observable.Observable;
+import observable.Props;
 import observable.server.Profiler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -26,7 +27,7 @@ public class LevelMixin {
     @Overwrite
     public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
         try {
-            if (Observable.INSTANCE.getPROFILER().getNotProcessing()) consumer.accept(entity);
+            if (Props.notProcessing) consumer.accept(entity);
             else {
                 long start = System.nanoTime();
                 consumer.accept(entity);
@@ -44,7 +45,7 @@ public class LevelMixin {
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
     public void redirectTick(TickableBlockEntity blockEntity) {
-        if (Observable.INSTANCE.getPROFILER().getNotProcessing()) blockEntity.tick();
+        if (Props.notProcessing) blockEntity.tick();
         else {
             long start = System.nanoTime();
             blockEntity.tick();

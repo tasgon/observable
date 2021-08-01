@@ -22,6 +22,8 @@ import observable.net.S2CPacket
 import observable.server.Profiler
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
+import java.util.*
+import kotlin.concurrent.schedule
 
 object Observable {
     const val MOD_ID = "observable"
@@ -100,9 +102,7 @@ object Observable {
             }
             val data = t.data.entities
             LOGGER.info("Received profiling result with ${data.size} entries")
-            synchronized(Overlay) {
-                Overlay.load()
-            }
+            Overlay.loadSync()
         }
     }
 
@@ -119,9 +119,7 @@ object Observable {
         ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
             Minecraft.getInstance().mouseHandler.releaseMouse()
             PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
-            synchronized(Overlay) {
-                Overlay.load(it)
-            }
+            Overlay.loadSync(it)
         }
     }
 }

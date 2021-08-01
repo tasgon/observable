@@ -4,8 +4,9 @@ object Settings {
     var minRate: Int = 0
         set(v) {
             field = v
-            synchronized(Overlay) {
-                Overlay.load()
-            }
+            Overlay.loadSync()
         }
+
+    var maxDist: Int = 2048
+        @Synchronized set
 }

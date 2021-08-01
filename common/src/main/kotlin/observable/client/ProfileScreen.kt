@@ -58,6 +58,9 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         })
         overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
+            if (it) synchronized(Overlay) {
+                Overlay.load()
+            }
             Overlay.enabled = it
         })
 
