@@ -7,10 +7,12 @@ import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.Vec3
 import observable.Observable
@@ -58,9 +60,9 @@ object Overlay {
                     }).createCompositeState(true))
     }
 
-    fun load() {
+    fun load(lvl: ClientLevel? = null) {
         val data = Observable.RESULTS ?: return
-        val level = Minecraft.getInstance().level ?: return
+        val level = lvl ?: Minecraft.getInstance().level ?: return
         val levelLocation = level.dimension().location()
         listOf(entities, blocks).forEach { it.clear() }
         data.entities[levelLocation]?.filter { it.rate > Settings.minRate }?.forEach { entry ->

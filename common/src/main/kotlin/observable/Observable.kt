@@ -2,11 +2,13 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
+import me.shedaniel.architectury.event.events.TickEvent
 import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
@@ -59,18 +61,22 @@ object Observable {
             }?.get(0)?.let { level ->
                 LOGGER.info("Receive request from ${(player.name as TextComponent).text} in " +
                         "${player.level.dimension().location()} to go to ${level.dimension().location()}")
-                if (player.level != level) with(player.position()) {
-                    (player as ServerPlayer).teleportTo(level, x, y, z,
-                        player.rotationVector.x, player.rotationVector.y)
-                }
-                t.pos?.apply {
-                    LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
-                    player.moveTo(x.toDouble(), y.toDouble(), z.toDouble())
-                }
-                t.entityId?.let {
-                    (level as Level).getEntity(it)?.position()?.apply {
+                Scheduler.SERVER.enqueue {
+                    if (player.level != level) with(player.position()) {
+                        (player as ServerPlayer).teleportTo(
+                            level, x, y, z,
+                            player.rotationVector.x, player.rotationVector.y
+                        )
+                    }
+                    t.pos?.apply {
                         LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
-                        player.moveTo(this)
+                        player.moveTo(x.toDouble(), y.toDouble(), z.toDouble())
+                    }
+                    t.entityId?.let {
+                        (level as Level).getEntity(it)?.position()?.apply {
+                            LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
+                            player.moveTo(this)
+                        }
                     }
                 }
             }
@@ -111,9 +117,10 @@ object Observable {
         }
 
         ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
+            Minecraft.getInstance().mouseHandler.releaseMouse()
             PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
             synchronized(Overlay) {
-                Overlay.load()
+                Overlay.load(it)
             }
         }
     }
