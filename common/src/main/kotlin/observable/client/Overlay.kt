@@ -31,13 +31,19 @@ object Overlay {
             0,
             (rateMicros / 100.0 * 255 + 25).roundToInt().coerceIn(0, 255)
         )
+
+        val hex: Int = with(this) {
+            val red = if (r > g) 0xFFu else (255 * r / g).toUInt()
+            val green = if (g > r) 0xFFu else (255 * g / r).toUInt()
+            (red shl 16) or (green shl 8) or (0xFFu shl 24)
+        }.toInt()
     }
 
-    sealed class Entry() {
-        data class EntityEntry(val entityId: Int, val rate: Double) : Entry() {
+    sealed class Entry(val color: Color) {
+        data class EntityEntry(val entityId: Int, val rate: Double) : Entry(Color.fromNanos(rate)) {
             val entity get() = Minecraft.getInstance().level?.getEntity(entityId)
         }
-        data class BlockEntry(val pos: BlockPos, val rate: Double, val color: Color = Color.fromNanos(rate)) : Entry()
+        data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(Color.fromNanos(rate))
     }
 
     var enabled = true
@@ -134,15 +140,11 @@ object Overlay {
         }.scale(partialTicks.toDouble()))
         else text += " [X]"
 
-        val c = Color.fromNanos(rate)
-        val r = if (c.r > c.g) 0xFFu else (255 * c.r / c.g).toUInt()
-        val g = if (c.g > c.r) 0xFFu else (255 * c.g / c.r).toUInt()
-        val col: UInt = (r shl 16) or (g shl 8) or (0xFFu shl 24)
         pos.apply {
             poseStack.translate(x, y + entity.bbHeight + 0.33, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
-            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col.toInt(), false,
+            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, entry.color.hex, false,
                 poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
         }
 
@@ -151,16 +153,15 @@ object Overlay {
 
     private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack,
                                         camera: Camera, bufSrc: MultiBufferSource) {
-        val (pos, _, color) = entry
         val buf = bufSrc.getBuffer(renderType)
 
         poseStack.pushPose()
 
-        pos.apply {
+        entry.pos.apply {
             poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble())
         }
         val mat = poseStack.last().pose()
-        color.apply {
+        entry.color.apply {
             buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
             buf.vertex(mat, 0F, 1F, 1F).color(r, g, b, a).endVertex()
             buf.vertex(mat, 1F, 1F, 1F).color(r, g, b, a).endVertex()

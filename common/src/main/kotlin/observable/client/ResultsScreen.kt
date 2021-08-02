@@ -88,9 +88,9 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 }?.let { list += it }
 
                 entryMap[it] = list.sortedByDescending {
-                    it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
+                    it.rate
                 }
-                dimTimingsMap[it] = list.sumOf { it.rate * it.ticks / ticks }
+                dimTimingsMap[it] = list.sumOf { it.rate }
             }
 
             typeTimingsMap = entryMap.values.flatten().groupBy { it.type }.mapValues { (_, value) ->
