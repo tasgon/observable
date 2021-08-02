@@ -8,5 +8,7 @@
   "text.observable.unimplemented": "Unimplemented!",
   "text.observable.results": "Results",
   "text.observable.overlay": "Overlay",
-  "text.observable.discord": "Contact me"
+  "text.observable.docs": "Learn",
+  "text.observable.discord": "Get help",
+  "text.observable.donate": "Donate"
 }

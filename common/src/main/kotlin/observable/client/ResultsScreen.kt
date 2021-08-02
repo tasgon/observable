@@ -49,9 +49,9 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     val filterBuf = ByteArray(256)
     val filterText get() = filterBuf.cStr
 
-    sealed class ResultsEntry(val type: String, val rate: Double) {
-        class EntityEntry(val id: Int, type: String, rate: Double) : ResultsEntry(type, rate)
-        class BlockEntry(val pos: BlockPos, type: String, rate: Double) : ResultsEntry(type, rate)
+    sealed class ResultsEntry(val type: String, val rate: Double, val ticks: Int) {
+        class EntityEntry(val id: Int, type: String, rate: Double, ticks: Int) : ResultsEntry(type, rate, ticks)
+        class BlockEntry(val pos: BlockPos, type: String, rate: Double, ticks: Int) : ResultsEntry(type, rate, ticks)
 
         fun requestTP(level: ResourceLocation) {
             val req = C2SPacket.RequestTeleport(level,
@@ -60,27 +60,49 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
+    data class TypeTimingsEntry(val type: String, val rate: Double, val ticks: Int)
+
+    var ticks = 0
     var entryMap = HashMap<ResourceLocation, List<ResultsEntry>>()
     var dimTimingsMap = HashMap<ResourceLocation, Double>()
-    lateinit var typeTimingsMap: List<Pair<String, Double>>
+    lateinit var typeTimingsMap: List<TypeTimingsEntry>
 
     fun loadData() {
         entryMap.clear()
         dimTimingsMap.clear()
+        val norm = Settings.normalized
         Observable.RESULTS?.let { data ->
+            ticks = data.ticks
+
             (data.entities.keys + data.blocks.keys).forEach {
                 val list: MutableList<ResultsEntry> = mutableListOf()
-                data.entities[it]?.map { ResultsEntry.EntityEntry(it.obj, it.type, it.rate) }?.let { list += it }
-                data.blocks[it]?.map { ResultsEntry.BlockEntry(it.obj, it.type, it.rate) }?.let { list += it }
+                data.entities[it]?.map {
+                    ResultsEntry.EntityEntry(it.obj, it.type,
+                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
+                        if (norm) ticks else it.ticks)
+                }?.let { list += it }
+                data.blocks[it]?.map {
+                    ResultsEntry.BlockEntry(it.obj, it.type,
+                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
+                        if (norm) ticks else it.ticks)
+                }?.let { list += it }
 
-                entryMap[it] = list.sortedByDescending { it.rate }
-                dimTimingsMap[it] = list.sumOf { it.rate }
+                entryMap[it] = list.sortedByDescending {
+                    it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
+                }
+                dimTimingsMap[it] = list.sumOf { it.rate * it.ticks / ticks }
+            }
+
+            typeTimingsMap = entryMap.values.flatten().groupBy { it.type }.mapValues { (_, value) ->
+                Pair(value.sumOf { it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0) },
+                    if (norm) value.size * ticks else value.sumOf { it.ticks })
+            }.toList().map {
+                val (rate, t) = it.second
+                TypeTimingsEntry(it.first, rate, t)
+            }.sortedByDescending {
+                it.rate
             }
         }
-
-        typeTimingsMap = entryMap.values.flatten().groupBy { it.type }.mapValues { (_, value) ->
-            value.sumOf { it.rate }
-        }.toList().sortedByDescending { it.second }
     }
 
     override fun init() {
@@ -140,12 +162,12 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 //        ImGui.showDemoWindow(booleanArrayOf(true))
 
         with(dsl) {
-            window("Individual Results", ::alwaysOpen) {
+            window("Individual Results ($ticks ticks processed)", ::alwaysOpen) {
                 ImGui.inputText("Filter", filterBuf)
                 val width = ImGui.windowWidth
                 entryMap.forEach { (dim, vals) ->
                     val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase()
-                            && it.rate > Settings.minRate
+                            && it.rate >= Settings.minRate
                     }
                     collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
                             " (${filtered.size} items)") {
@@ -155,7 +177,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                         filtered.forEach {
                             ImGui.text(it.type)
                             ImGui.nextColumn()
-                            ImGui.text("${(it.rate / 1000).roundToInt()} us/t")
+                            ImGui.text("${(it.rate / 1000).roundToInt()} us/t (${it.ticks} ticks)")
                             ImGui.nextColumn()
                             withId(it) {
                                 button("Visit") {
@@ -172,11 +194,11 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
             window("Aggregated Results", ::alwaysOpen) {
                 ImGui.columns(2, "aggResCol", false)
-                ImGui.setColumnWidth(0, ImGui.windowWidth * .8F)
-                typeTimingsMap.forEach { (type, rate) ->
+                ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
+                typeTimingsMap.forEach { (type, rate, ticks) ->
                     ImGui.text(type)
                     ImGui.nextColumn()
-                    ImGui.text("${(rate / 1000).roundToInt()} us/t")
+                    ImGui.text("${(rate / 1000).roundToInt()} us/t ($ticks ticks)")
                     ImGui.nextColumn()
                 }
                 ImGui.columns(1)
@@ -187,6 +209,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                     try {
                         ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
                         ImGui.inputInt("Maximum distance (m)", ::maxDist)
+                        ImGui.checkbox("Normalize results", ::normalized)
                     } catch (e: Exception) {
                         ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
                     }

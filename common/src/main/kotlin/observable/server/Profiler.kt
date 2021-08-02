@@ -34,6 +34,8 @@ class Profiler {
 
     var player: ServerPlayer? = null
 
+    var startingTicks: Int = 0
+
     fun process(entity: Entity, time: Long) {
         val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
         timingInfo.time += time
@@ -75,9 +77,11 @@ class Profiler {
     fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
         player = ctx.player as? ServerPlayer
         timingsMap.clear()
+        blockTimingsMap.clear()
         val start = System.nanoTime()
         synchronized(Props.notProcessing) {
             notProcessing = false
+            startingTicks = GameInstance.getServer()!!.tickCount
         }
         duration?.let {
             val durMs = duration.toLong() * 1000L
@@ -91,13 +95,15 @@ class Profiler {
     }
 
     fun stopRunning() {
+        val ticks: Int
         synchronized(Props.notProcessing) {
             notProcessing = true
+            ticks = GameInstance.getServer()!!.tickCount - startingTicks
         }
         val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
-        val data = ProfilingData(timingsMap, blockTimingsMap)
-        Observable.LOGGER.info("Profiler done, sending data (${data.entities.size} (block)entities logged)")
+        val data = ProfilingData(timingsMap, blockTimingsMap, ticks)
+        Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data (${data.entities.size} (block)entities logged)")
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingResult(data))
         Observable.LOGGER.info("Data transfer complete!")

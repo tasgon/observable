@@ -13,30 +13,31 @@ import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
-import net.minecraft.resources.ResourceLocation
-import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.Vec3
 import observable.Observable
 import kotlin.math.roundToInt
 
 object Overlay {
-    data class Color(val r: Int, val g: Int, val b: Int, val a: Int)
-
-    sealed class Entry(val color: Color) {
+    data class Color(val r: Int, val g: Int, val b: Int, val a: Int) {
         companion object {
-            fun getColor(rate: Double) = Color(
-                (rate / 100.0 * 255).roundToInt().coerceIn(0, 255),
-                ((100.0 - rate) / 100.0 * 255).roundToInt().coerceIn(0, 255),
-                0,
-                (rate / 100.0).roundToInt().coerceIn(0, 255)
-            )
+            fun fromNanos(rateNanos: Double): Color {
+                val micros = rateNanos / 1000.0
+                return Color(micros)
+            }
         }
-        data class EntityEntry(val entityId: Int, val rate: Double) : Entry(getColor(rate)) {
+        constructor(rateMicros: Double) : this(
+            (rateMicros / 100.0 * 255).roundToInt().coerceIn(0, 255),
+            ((100.0 - rateMicros) / 100.0 * 255).roundToInt().coerceIn(0, 255),
+            0,
+            (rateMicros / 100.0 * 255 + 25).roundToInt().coerceIn(0, 255)
+        )
+    }
+
+    sealed class Entry() {
+        data class EntityEntry(val entityId: Int, val rate: Double) : Entry() {
             val entity get() = Minecraft.getInstance().level?.getEntity(entityId)
         }
-        data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(getColor(rate / 1000.0))
-
-        operator fun component3() = color
+        data class BlockEntry(val pos: BlockPos, val rate: Double, val color: Color = Color.fromNanos(rate)) : Entry()
     }
 
     var enabled = true
@@ -46,8 +47,8 @@ object Overlay {
 
     val font: Font by lazy { Minecraft.getInstance().font }
     @Suppress("INACCESSIBLE_TYPE")
-    private val renderType: RenderType by lazy {
-        RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
+    private val renderType: RenderType get() {
+        return RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
             RenderType.CompositeState.builder()
                 .setTextureState(RenderStateShard.TextureStateShard())
                 .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
@@ -55,7 +56,7 @@ object Overlay {
                     RenderStateShard.TransparencyStateShard("translucent_transparency",
                         {
                             RenderSystem.enableBlend()
-                            RenderSystem.blendFunc(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE)
+                            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE)
                         }
                     ) {
                         RenderSystem.disableBlend()
@@ -67,13 +68,15 @@ object Overlay {
         val data = Observable.RESULTS ?: return
         val level = lvl ?: Minecraft.getInstance().level ?: return
         val levelLocation = level.dimension().location()
-        entities = data.entities[levelLocation]?.filter { it.rate > Settings.minRate }?.map {
-            Entry.EntityEntry(it.obj, it.rate)
-        }.orEmpty()
+        val ticks = data.ticks
+        val norm = Settings.normalized
+        entities = data.entities[levelLocation]?.map {
+            Entry.EntityEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
+        }?.filter { it.rate >= Settings.minRate }.orEmpty()
 
-        blocks = data.blocks[levelLocation]?.filter { it.rate > Settings.minRate }?.map {
-            Entry.BlockEntry(it.obj, it.rate)
-        }.orEmpty()
+        blocks = data.blocks[levelLocation]?.map {
+            Entry.BlockEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
+        }?.filter { it.rate >= Settings.minRate }.orEmpty()
     }
 
     inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) {
@@ -120,7 +123,7 @@ object Overlay {
         val rate = entry.rate
         val entity = entry.entity ?: return
         if (entity.removed || (entity == Minecraft.getInstance().player
-            && entity.deltaMovement.lengthSqr() > .05)) return
+            && entity.deltaMovement.lengthSqr() > .01)) return
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
@@ -131,12 +134,15 @@ object Overlay {
         }.scale(partialTicks.toDouble()))
         else text += " [X]"
 
-        val col: Int = -0x1
+        val c = Color.fromNanos(rate)
+        val r = if (c.r > c.g) 0xFFu else (255 * c.r / c.g).toUInt()
+        val g = if (c.g > c.r) 0xFFu else (255 * c.g / c.r).toUInt()
+        val col: UInt = (r shl 16) or (g shl 8) or (0xFFu shl 24)
         pos.apply {
             poseStack.translate(x, y + entity.bbHeight + 0.33, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
-            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
+            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col.toInt(), false,
                 poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
         }
 
@@ -193,11 +199,10 @@ object Overlay {
                                  camera: Camera, bufSrc: MultiBufferSource) {
         poseStack.pushPose()
 
-        val (pos, rate, color) = entry
+        val (pos, rate) = entry
         val text = "${(rate / 1000).roundToInt()} μs/t"
 
         val col: Int = -0x1
-        val opacity = 0x00FFFFFF;
         pos.apply {
             poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
             poseStack.mulPose(camera.rotation())

@@ -1,13 +1,14 @@
 modLoader = "javafml"
 loaderVersion = "[35,)"
-#issueTrackerURL = ""
+issueTrackerURL = "https://github.com/tasgon/observable/issues"
 license = "MPL"
 
 [[mods]]
 modId = "observable"
 version = "${version}"
 displayName = "Observable"
-authors = "Me!"
+authors = "tasgon"
+displayURL = "https://github.com/tasgon/observable"
 description = '''
 See what's lagging your world.
 '''
@@ -33,3 +34,10 @@ mandatory = true
 versionRange = "[1.1.55,)"
 ordering = "AFTER"
 side = "BOTH"
+
+# [[dependencies.observable]]
+# modId = "kotlinforforge"
+# mandatory = true
+# versionRange = "[1.11.0,)"
+# ordering = "AFTER"
+# side = "BOTH"

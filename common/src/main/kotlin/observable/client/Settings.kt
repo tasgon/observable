@@ -1,5 +1,7 @@
 package observable.client
 
+import net.minecraft.client.Minecraft
+
 object Settings {
     var minRate: Int = 0
         set(v) {
@@ -9,4 +11,11 @@ object Settings {
 
     var maxDist: Int = 2048
         @Synchronized set
+
+    var normalized = false
+        set(v) {
+            field = v
+            (Minecraft.getInstance().screen as? ResultsScreen)?.loadData()
+            Overlay.loadSync()
+        }
 }

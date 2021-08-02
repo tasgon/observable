@@ -19,23 +19,24 @@ import observable.server.Profiler
 
 @Serializable
 data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
-                         val blocks: Map<ResourceLocation, List<Entry<BlockPos>>>) {
+                         val blocks: Map<ResourceLocation, List<Entry<BlockPos>>>, val ticks: Int) {
     constructor(entities: Map<Entity, Profiler.TimingData>,
                 blocks: Map<ResourceKey<Level>, Map<BlockPos, Profiler.TimingData>>,
+                ticks: Int,
                 custom: Boolean = true
     ) : this(entities.map { (entity, data) ->
         Entry(entity, Registry.ENTITY_TYPE.getKey(entity.type).toString(), data)
     }.groupBy { it.obj.level.dimension().location() }
         .mapValues {
-            it.value.map { Entry(it.obj.id, it.type, it.rate, it.traces) }
+            it.value.map { Entry(it.obj.id, it.type, it.rate, it.ticks, it.traces) }
         }, blocks.map {
         it.key.location() to it.value.map { Entry(it.key, it.value.name, it.value) }
-    }.toMap())
+    }.toMap(), ticks)
 
     @Serializable
-    data class Entry<T>(val obj: T, val type: String, val rate: Double, val traces: List<SerializedStackTrace>) {
+    data class Entry<T>(val obj: T, val type: String, val rate: Double, val ticks: Int, val traces: List<SerializedStackTrace>) {
         constructor(obj: T, type: String, data: Profiler.TimingData) : this(obj, type,
-            data.time.toDouble() / data.ticks.toDouble(), data.traces.map { SerializedStackTrace(it) })
+            data.time.toDouble() / data.ticks.toDouble(), data.ticks, data.traces.map { SerializedStackTrace(it) })
     }
 
     @Serializable

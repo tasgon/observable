@@ -3,6 +3,7 @@ package observable.mixin;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -29,10 +30,14 @@ public class LevelMixin {
         try {
             if (Props.notProcessing) consumer.accept(entity);
             else {
-                long start = System.nanoTime();
-                consumer.accept(entity);
-                long end = System.nanoTime();
-                Observable.INSTANCE.getPROFILER().process(entity, end - start);
+                if ((Object)this instanceof ServerLevel) {
+                    long start = System.nanoTime();
+                    consumer.accept(entity);
+                    long end = System.nanoTime();
+                    Observable.INSTANCE.getPROFILER().process(entity, end - start);
+                } else {
+                    consumer.accept(entity);
+                }
             }
         } catch (Throwable throwable) {
             CrashReport crashReport = CrashReport.forThrowable(throwable, "Ticking entity");
@@ -47,10 +52,14 @@ public class LevelMixin {
     public void redirectTick(TickableBlockEntity blockEntity) {
         if (Props.notProcessing) blockEntity.tick();
         else {
-            long start = System.nanoTime();
-            blockEntity.tick();
-            long end = System.nanoTime();
-            Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity, end - start);
+            if ((Object)this instanceof ServerLevel) {
+                long start = System.nanoTime();
+                blockEntity.tick();
+                long end = System.nanoTime();
+                Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity, end - start);
+            } else {
+                blockEntity.tick();
+            }
         }
     }
 }

@@ -1,9 +1,12 @@
 package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer
+import net.minecraft.Util
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
@@ -35,6 +38,16 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
     val fpsText = TranslatableComponent("text.observable.profile_fps")
     val unimplementedText = TranslatableComponent("text.observable.unimplemented")
+
+    fun openLink(dest: String) {
+        val mc = Minecraft.getInstance()
+        mc.setScreen(ConfirmLinkScreen({ bl: Boolean ->
+            if (bl) {
+                Util.getPlatform().openUri(dest)
+            }
+            mc.setScreen(this)
+        }, dest, true))
+    }
 
     override fun init() {
         super.init()
@@ -69,6 +82,20 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 it.active = false
             }
         }
+
+        val width = resultsBtn.width / 3 - 2
+        val learnBtn = addButton(Button(startBtn.x, overlayBtn.y + overlayBtn.height + 8,
+            width, 20, TranslatableComponent("text.observable.docs")) {
+            openLink("https://github.com/tasgon/observable/wiki")
+        })
+        val helpBtn = addButton(Button(learnBtn.x + learnBtn.width + 4, learnBtn.y,
+            width, 20, TranslatableComponent("text.observable.discord")) {
+            openLink("https://discord.gg/sfPbb3b5tF")
+        })
+        val donateBtn = addButton(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
+            width, 20, TranslatableComponent("text.observable.donate")) {
+
+        })
     }
 
     override fun isPauseScreen() = false
