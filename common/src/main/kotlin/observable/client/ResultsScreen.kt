@@ -1,5 +1,6 @@
 package observable.client
 
+import ChunkMap
 import com.mojang.blaze3d.vertex.PoseStack
 import imgui.ImGui
 import imgui.cStr
@@ -66,6 +67,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     var entryMap = HashMap<ResourceLocation, List<ResultsEntry>>()
     var dimTimingsMap = HashMap<ResourceLocation, Double>()
     lateinit var typeTimingsMap: List<TypeTimingsEntry>
+    lateinit var chunkMap: ChunkMap
 
     fun loadData() {
         entryMap.clear()
@@ -102,6 +104,8 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             }.sortedByDescending {
                 it.rate
             }
+
+            chunkMap = data.chunks
         }
     }
 
@@ -182,6 +186,33 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                             withId(it) {
                                 button("Visit") {
                                     it.requestTP(dim)
+                                }
+                            }
+                            ImGui.nextColumn()
+                        }
+
+                        ImGui.columns(1)
+                    }
+                }
+            }
+
+            window("Chunks", ::alwaysOpen) {
+                chunkMap.forEach { (dim, chunks) ->
+                    collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                            " (${chunks.size} items)") {
+                        ImGui.columns(3, "chunkCol", false)
+                        ImGui.setColumnWidth(0, width * .5F)
+
+                        chunks.forEach {
+                            val (pos, rate) = it
+                            ImGui.text("${pos.x}, ${pos.z}")
+                            ImGui.nextColumn()
+                            ImGui.text("${(rate / 1000).roundToInt()} us/t")
+                            ImGui.nextColumn()
+                            withId(it) {
+                                button("Visit") {
+                                    Observable.CHANNEL.sendToServer(C2SPacket.RequestTeleport(dim,
+                                        null, BlockPos(pos.x * 16, 100, pos.z * 16)))
                                 }
                             }
                             ImGui.nextColumn()

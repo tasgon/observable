@@ -102,7 +102,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         })
 
         this.startBtn = startBtn
-        Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
+        if (action == Action.UNAVAILABLE ||
+            action == Action.NO_PERMISSIONS) Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
     }
 
     override fun isPauseScreen() = false
