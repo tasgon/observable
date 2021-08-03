@@ -6,7 +6,7 @@ import imgui.ImGui
 import imgui.cStr
 import imgui.classes.Context
 import imgui.dsl
-import imgui.impl.gl.ImplGL3
+import imgui.impl.gl.ImplBestGL
 import imgui.impl.glfw.ImplGlfw
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")) {
     companion object {
         lateinit var implGlfw: ImplGlfw
-        lateinit var implGL3: ImplGL3
+        lateinit var implGL: ImplBestGL
 
         val keyBuf = HashSet<Int>()
 
@@ -37,7 +37,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             window.makeContextCurrent()
             Context()
             implGlfw = ImplGlfw(window, false, null)
-            implGL3 = ImplGL3()
+            implGL = ImplBestGL()
 
             inited = true
         }
@@ -158,7 +158,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     override fun render(poseStack: PoseStack?, i: Int, j: Int, f: Float) {
         super.render(poseStack, i, j, f)
 
-        implGL3.newFrame()
+        implGL.newFrame()
         implGlfw.newFrame()
 
         ImGui.newFrame()
@@ -250,6 +250,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
         ImGui.render()
 
-        implGL3.renderDrawData(ImGui.drawData!!)
+        implGL.renderDrawData(ImGui.drawData!!)
     }
 }
