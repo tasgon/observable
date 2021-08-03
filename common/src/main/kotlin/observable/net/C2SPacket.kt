@@ -22,4 +22,7 @@ class C2SPacket {
         constructor(level: ResourceLocation, entityId: Int) : this(level, entityId, null)
         constructor(level: ResourceLocation, pos: BlockPos) : this(level, null, pos)
     }
+
+    @Serializable
+    object RequestAvailability
 }

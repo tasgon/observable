@@ -17,21 +17,25 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
+            val UNAVAILABLE = ObservableStatus("text.observable.unavailable")
+            val NO_PERMISSIONS = ObservableStatus("text.observable.no_permissions")
         }
         data class NewProfile(var duration: Int) : Action()
         data class TPSProfilerRunning(val endTime: Long) : Action()
         object TPSProfilerCompleted : Action()
+        data class ObservableStatus(var text: String) : Action()
 
         val statusMsg get() = when (this) {
             is NewProfile -> "Duration (scroll): $duration seconds"
             is TPSProfilerRunning -> "Running for another %.1f seconds"
                 .format(((endTime - System.nanoTime()).toDouble() / 1e9).coerceAtLeast(0.0) )
             is TPSProfilerCompleted -> "Profiling finished, please wait..."
+            is ObservableStatus -> TranslatableComponent(text).string
         }
     }
 
-    var action: Action = Action.DEFAULT
-    lateinit var startBtn: Button
+    var action: Action = Action.UNAVAILABLE
+    var startBtn: Button? = null
     lateinit var fpsBtn: Button
     lateinit var resultsBtn: Button
     lateinit var overlayBtn: BetterCheckbox
@@ -52,7 +56,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     override fun init() {
         super.init()
 
-        startBtn = addButton(Button(
+        val startBtn = addButton(Button(
             0, height / 2 - 28, 100, 20, TranslatableComponent("text.observable.profile_tps")
         ) {
             val duration = (action as Action.NewProfile).duration
@@ -96,13 +100,16 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             width, 20, TranslatableComponent("text.observable.donate")) {
 
         })
+
+        this.startBtn = startBtn
+        Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
     }
 
     override fun isPauseScreen() = false
 
     override fun render(poseStack: PoseStack, i: Int, j: Int, f: Float) {
         GuiComponent.drawCenteredString(poseStack, this.font, action.statusMsg,
-            width / 2, startBtn.y - this.font.lineHeight - 4, 0xFFFFFF)
+            width / 2, startBtn!!.y - this.font.lineHeight - 4, 0xFFFFFF)
 
         super.render(poseStack, i, j, f)
     }

@@ -84,9 +84,19 @@ object Observable {
             }
         }
 
+        CHANNEL.register { T: C2SPacket.RequestAvailability, supplier ->
+            (supplier.get().player as? ServerPlayer)?.let {
+                CHANNEL.sendToPlayer(
+                    it,
+                    if (hasPermission(it)) S2CPacket.Availability.Available
+                    else S2CPacket.Availability.NoPermissions
+                )
+            }
+        }
+
         CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endNanos)
-            PROFILE_SCREEN.startBtn.active = false
+            PROFILE_SCREEN.startBtn?.active = false
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingCompleted, supplier ->
@@ -97,12 +107,25 @@ object Observable {
             RESULTS = t.data
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
-                startBtn.active = true
+                startBtn?.active = true
                 arrayOf(resultsBtn, overlayBtn).forEach { it.active = true }
             }
             val data = t.data.entities
             LOGGER.info("Received profiling result with ${data.size} entries")
             Overlay.loadSync()
+        }
+        
+        CHANNEL.register { t: S2CPacket.Availability, supplier ->
+            when (t) {
+                S2CPacket.Availability.Available -> {
+                    PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
+                    PROFILE_SCREEN.startBtn?.active = true
+                }
+                S2CPacket.Availability.NoPermissions -> {
+                    PROFILE_SCREEN.action = ProfileScreen.Action.NO_PERMISSIONS
+                    PROFILE_SCREEN.startBtn?.active = false
+                }
+            }
         }
     }
 
@@ -117,8 +140,7 @@ object Observable {
         }
 
         ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
-            Minecraft.getInstance().mouseHandler.releaseMouse()
-            PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
+            PROFILE_SCREEN.action = ProfileScreen.Action.UNAVAILABLE
             Overlay.loadSync(it)
         }
     }

@@ -13,4 +13,10 @@ class S2CPacket {
 
     @Serializable
     data class ProfilingResult(val data: ProfilingData)
+
+    @Serializable
+    enum class Availability {
+        Available,
+        NoPermissions
+    }
 }
