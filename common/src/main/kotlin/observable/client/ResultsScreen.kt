@@ -164,29 +164,26 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
         implGL.newFrame()
         implGlfw.newFrame()
-
         ImGui.newFrame()
 
-//        ImGui.showDemoWindow(booleanArrayOf(true))
         val size = implGlfw.window.size
-
+        val startingPos = Vec2(100, 100)
         val indivSize = Vec2((size.x - 300) / 2, (size.y - 300) / 2)
 
 
         with(dsl) {
-            ImGui.setNextWindowPos(Vec2(100, 100), Cond.Once)
+            ImGui.setNextWindowPos(startingPos, Cond.Once)
             ImGui.setNextWindowSize(indivSize, Cond.Once)
             window("Individual Results ($ticks ticks processed)", ::alwaysOpen) {
                 ImGui.inputText("Filter", filterBuf)
-                val width = ImGui.windowWidth
                 entryMap.forEach { (dim, vals) ->
                     val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase()
                             && it.rate >= Settings.minRate
                     }
-                    collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                    collapsingHeader("$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
                             " (${filtered.size} items)") {
                         ImGui.columns(3, "resCol", false)
-                        ImGui.setColumnWidth(0, width * .5F)
+                        ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
 
                         filtered.forEach {
                             ImGui.text(it.type)
@@ -206,12 +203,14 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 }
             }
 
+            ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
+            ImGui.setNextWindowSize(indivSize, Cond.Once)
             window("Chunks", ::alwaysOpen) {
                 chunkMap.forEach { (dim, chunks) ->
-                    collapsingHeader("${dim.toString()} -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                    collapsingHeader("$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
                             " (${chunks.size} items)") {
                         ImGui.columns(3, "chunkCol", false)
-                        ImGui.setColumnWidth(0, width * .5F)
+                        ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
 
                         chunks.forEach {
                             val (pos, rate) = it
@@ -233,6 +232,8 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 }
             }
 
+            ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
+            ImGui.setNextWindowSize(indivSize, Cond.Once)
             window("Aggregated Results", ::alwaysOpen) {
                 ImGui.columns(2, "aggResCol", false)
                 ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
@@ -245,11 +246,14 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.columns(1)
             }
 
+            ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
+            ImGui.setNextWindowSize(indivSize, Cond.Once)
             window("Settings", ::alwaysOpen) {
                 with(Settings) {
                     try {
                         ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
-                        ImGui.inputInt("Maximum distance (m)", ::maxDist)
+                        ImGui.inputInt("Maximum block text distance (m)", ::maxBlockDist)
+                        ImGui.inputInt("Maximum entity text distance (m)", ::maxEntityDist)
                         ImGui.checkbox("Normalize results", ::normalized)
                     } catch (e: Exception) {
                         ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")

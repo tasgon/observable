@@ -1,4 +1,3 @@
 package observable.client
 
-class InGameOverlay {
-}
+class InGameOverlay

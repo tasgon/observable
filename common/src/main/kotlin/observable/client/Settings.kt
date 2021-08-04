@@ -9,7 +9,10 @@ object Settings {
             Overlay.loadSync()
         }
 
-    var maxDist: Int = 2048
+    var maxBlockDist: Int = 128
+        @Synchronized set
+
+    var maxEntityDist: Int = 2048
         @Synchronized set
 
     var normalized = false

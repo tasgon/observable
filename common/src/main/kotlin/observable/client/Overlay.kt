@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import org.lwjgl.opengl.GL11
-import org.lwjgl.opengl.GL20
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -109,7 +107,7 @@ object Overlay {
         poseStack.pushPose()
 
         if (dataAvailable) {
-            createVBO(poseStack, camera)
+            createVBO(camera)
             dataAvailable = false
         }
 
@@ -120,8 +118,7 @@ object Overlay {
         synchronized(this) {
 
             for (entry in blocks) {
-                if (camera.blockPosition.distSqr(entry.pos) > Settings.maxDist.pow(2)) continue
-//                drawBlockOutline(entry, poseStack, camera, buf)
+                if (camera.blockPosition.distSqr(entry.pos) > Settings.maxBlockDist.pow(2)) continue
                 drawBlock(entry, poseStack, camera, bufSrc)
             }
 
@@ -146,7 +143,7 @@ object Overlay {
         RenderSystem.enableDepthTest()
     }
 
-    fun createVBO(poseStack: PoseStack, camera: Camera) {
+    fun createVBO(camera: Camera) {
         Observable.LOGGER.info("Initializing VBO")
         vertexBuf?.close()
         val buf = BufferBuilder(renderType.bufferSize() * blocks.size)
@@ -155,7 +152,7 @@ object Overlay {
         var stack = PoseStack()
 
         for (entry in blocks) {
-            drawBlockOutline(entry, stack, camera, buf)
+            drawBlockOutline(entry, stack, buf)
         }
 
         buf.end()
@@ -175,7 +172,7 @@ object Overlay {
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
-        if (camera.position.distanceTo(pos) > Settings.maxDist) return
+        if (camera.position.distanceTo(pos) > Settings.maxEntityDist) return
         if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
             Vec3(x, y.coerceAtLeast(0.0), z)
         }.scale(partialTicks.toDouble()))
@@ -192,10 +189,7 @@ object Overlay {
         poseStack.popPose()
     }
 
-    private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack,
-                                        camera: Camera, buf: VertexConsumer) {
-//        val buf = bufSrc.getBuffer(renderType)
-
+    private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack, buf: VertexConsumer) {
         poseStack.pushPose()
 
         entry.pos.apply {
