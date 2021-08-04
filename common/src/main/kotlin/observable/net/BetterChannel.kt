@@ -39,7 +39,6 @@ class BetterChannel(id: ResourceLocation) {
             val KNOWN_TYPES = HashMap<String, KType>()
             val ACTIONS = HashMap<KType, (Any, Supplier<NetworkManager.PacketContext>) -> Unit>()
             val PACKET_SIZE = 1000000
-//            val PACKET_SIZE = 100
 
             @OptIn(ExperimentalStdlibApi::class)
             inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
@@ -159,7 +158,8 @@ class BetterChannel(id: ResourceLocation) {
         val bs = ByteArrayInputStream(data)
         val id = UUID.randomUUID().leastSignificantBits
         rawChannel.sendToPlayers(players, PartialPacketBegin(id, T::class.java.name))
-        val size = bs.available() / (PartialPacketAssembler.PACKET_SIZE + 1) + 1
+        val size = bs.available() / PartialPacketAssembler.PACKET_SIZE +
+                (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
         var idx = 0
         while (bs.available() > 0) {
             val data = bs.readNBytes(PartialPacketAssembler.PACKET_SIZE)
