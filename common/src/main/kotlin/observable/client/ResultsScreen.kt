@@ -19,6 +19,7 @@ import observable.Observable
 import observable.net.C2SPacket
 import uno.glfw.GlfwWindow
 import java.lang.Exception
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")) {
@@ -45,8 +46,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
-    val filterBuf = ByteArray(256)
-    val filterText get() = filterBuf.cStr
+    var filterBuf = ByteArray(256)
 
     sealed class ResultsEntry(val type: String, val rate: Double, val ticks: Int) {
         class EntityEntry(val id: Int, type: String, rate: Double, ticks: Int) : ResultsEntry(type, rate, ticks)
@@ -62,10 +62,17 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     data class TypeTimingsEntry(val type: String, val rate: Double, val ticks: Int)
 
     var ticks = 0
+    var individualListingOffset = 0
+    val NUM_ITEMS = 100
     var entryMap = HashMap<ResourceLocation, List<ResultsEntry>>()
+    var filterMap: Map<ResourceLocation, List<ResultsEntry>> = mapOf()
     var dimTimingsMap = HashMap<ResourceLocation, Double>()
     lateinit var typeTimingsMap: List<TypeTimingsEntry>
     lateinit var chunkMap: ChunkMap
+    var exception: Exception? = null
+    var exceptionOpen: Boolean
+        get() = exception != null
+        set(v) { if (!v) exception = null }
 
     fun loadData() {
         entryMap.clear()
@@ -104,7 +111,20 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             }
 
             chunkMap = data.chunks
+
+            applyMapFilter()
         }
+        individualListingOffset = 0
+    }
+
+    fun applyMapFilter() {
+        filterMap = entryMap.map { (key, list) ->
+            key to list.filter {
+                filterBuf.cStr.lowercase() in it.type.lowercase()
+                        && it.rate >= Settings.minRate
+            }
+        }.toMap()
+        individualListingOffset = 0
     }
 
     override fun init() {
@@ -156,6 +176,18 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     override fun render(poseStack: PoseStack?, i: Int, j: Int, f: Float) {
         super.render(poseStack, i, j, f)
 
+        try {
+            doRender(i, j, f)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val mc = Minecraft.getInstance()
+            mc.player?.chat(TranslatableComponent("text.observable.error", e.message).string)
+            mc.player?.chat(TranslatableComponent("text.observable.report").string)
+            mc.screen = null
+        }
+    }
+
+    inline fun doRender(i: Int, j: Int, f: Float) {
         implGL.newFrame()
         implGlfw.newFrame()
         ImGui.newFrame()
@@ -166,93 +198,123 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
 
         with(dsl) {
-            ImGui.setNextWindowPos(startingPos, Cond.Once)
-            ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Individual Results ($ticks ticks processed)", null) {
-                ImGui.inputText("Filter", filterBuf)
-                entryMap.forEach { (dim, vals) ->
-                    val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase()
-                            && it.rate >= Settings.minRate
-                    }
-                    collapsingHeader("$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
-                            " (${filtered.size} items)") {
-                        ImGui.columns(3, "resCol", false)
-                        ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
-
-                        filtered.forEach {
-                            ImGui.text(it.type)
-                            ImGui.nextColumn()
-                            ImGui.text("${(it.rate / 1000).roundToInt()} us/t (${it.ticks} ticks)")
-                            ImGui.nextColumn()
-                            withId(it) {
-                                button("Visit") {
-                                    it.requestTP(dim)
+            try {
+                ImGui.setNextWindowPos(startingPos, Cond.Once)
+                ImGui.setNextWindowSize(indivSize, Cond.Once)
+                window("Individual Results ($ticks ticks processed)", null) {
+                    if (ImGui.inputText("Filter", filterBuf)) { applyMapFilter() }
+                    filterMap.forEach { (dim, vals) ->
+                        collapsingHeader(
+                            "$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                                    " (${vals.size} items)"
+                        ) {
+                            if (individualListingOffset != 0) withId(dim) {
+                                button("Move up") {
+                                    individualListingOffset = (individualListingOffset - NUM_ITEMS)
+                                        .coerceAtLeast(0)
                                 }
                             }
-                            ImGui.nextColumn()
-                        }
+                            ImGui.columns(3, "resCol", false)
+                            ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
 
-                        ImGui.columns(1)
-                    }
-                }
-            }
-
-            ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
-            ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Chunks", null) {
-                chunkMap.forEach { (dim, chunks) ->
-                    collapsingHeader("$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
-                            " (${chunks.size} items)") {
-                        ImGui.columns(3, "chunkCol", false)
-                        ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
-
-                        chunks.forEach {
-                            val (pos, rate) = it
-                            ImGui.text("${pos.x}, ${pos.z}")
-                            ImGui.nextColumn()
-                            ImGui.text("${(rate / 1000).roundToInt()} us/t")
-                            ImGui.nextColumn()
-                            withId(it) {
-                                button("Visit") {
-                                    Observable.CHANNEL.sendToServer(C2SPacket.RequestTeleport(dim,
-                                        null, BlockPos(pos.x * 16, 100, pos.z * 16)))
+                            vals.subList(individualListingOffset,
+                                min(vals.size, individualListingOffset + NUM_ITEMS)
+                            ).forEach {
+                                ImGui.text(it.type)
+                                ImGui.nextColumn()
+                                ImGui.text("${(it.rate / 1000).roundToInt()} us/t (${it.ticks} ticks)")
+                                ImGui.nextColumn()
+                                withId(it) {
+                                    button("Visit") {
+                                        it.requestTP(dim)
+                                    }
+                                }
+                                ImGui.nextColumn()
+                            }
+                            ImGui.columns(1)
+                            if (individualListingOffset != vals.size - NUM_ITEMS
+                                && vals.size > NUM_ITEMS) withId(vals) {
+                                button("Move down") {
+                                    individualListingOffset = (individualListingOffset + NUM_ITEMS)
+                                        .coerceAtMost(vals.size - NUM_ITEMS)
                                 }
                             }
-                            ImGui.nextColumn()
                         }
-
-                        ImGui.columns(1)
                     }
                 }
-            }
 
-            ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
-            ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Aggregated Results", null) {
-                ImGui.columns(2, "aggResCol", false)
-                ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
-                typeTimingsMap.forEach { (type, rate, ticks) ->
-                    ImGui.text(type)
-                    ImGui.nextColumn()
-                    ImGui.text("${(rate / 1000).roundToInt()} us/t ($ticks ticks)")
-                    ImGui.nextColumn()
-                }
-                ImGui.columns(1)
-            }
+                ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
+                ImGui.setNextWindowSize(indivSize, Cond.Once)
+                window("Chunks", null) {
+                    chunkMap.forEach { (dim, chunks) ->
+                        collapsingHeader(
+                            "$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
+                                    " (${chunks.size} items)"
+                        ) {
+                            ImGui.columns(3, "chunkCol", false)
+                            ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
 
-            ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
-            ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Settings", null) {
-                with(Settings) {
-                    try {
-                        ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
-                        ImGui.inputInt("Maximum block text distance (m)", ::maxBlockDist)
-                        ImGui.inputInt("Maximum entity text distance (m)", ::maxEntityDist)
-                        ImGui.checkbox("Normalize results", ::normalized)
-                    } catch (e: Exception) {
-                        ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
+                            chunks.forEach {
+                                val (pos, rate) = it
+                                ImGui.text("${pos.x}, ${pos.z}")
+                                ImGui.nextColumn()
+                                ImGui.text("${(rate / 1000).roundToInt()} us/t")
+                                ImGui.nextColumn()
+                                withId(it) {
+                                    button("Visit") {
+                                        Observable.CHANNEL.sendToServer(
+                                            C2SPacket.RequestTeleport(
+                                                dim,
+                                                null, BlockPos(pos.x * 16, 100, pos.z * 16)
+                                            )
+                                        )
+                                    }
+                                }
+                                ImGui.nextColumn()
+                            }
+
+                            ImGui.columns(1)
+                        }
                     }
                 }
+
+                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
+                ImGui.setNextWindowSize(indivSize, Cond.Once)
+                window("Aggregated Results", null) {
+                    ImGui.columns(2, "aggResCol", false)
+                    ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
+                    typeTimingsMap.forEach { (type, rate, ticks) ->
+                        ImGui.text(type)
+                        ImGui.nextColumn()
+                        ImGui.text("${(rate / 1000).roundToInt()} us/t ($ticks ticks)")
+                        ImGui.nextColumn()
+                    }
+                    ImGui.columns(1)
+                }
+
+                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
+                ImGui.setNextWindowSize(indivSize, Cond.Once)
+                window("Settings", null) {
+                    with(Settings) {
+                        try {
+                            ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
+                            ImGui.inputInt("Maximum block text distance (m)", ::maxBlockDist)
+                            ImGui.inputInt("Maximum entity text distance (m)", ::maxEntityDist)
+                            ImGui.checkbox("Normalize results", ::normalized)
+                        } catch (e: Exception) {
+                            ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
+                        }
+                    }
+                }
+
+                // TODO: fix this
+//                window("Error", ::exceptionOpen) {
+//                    ImGui.text("Error rendering gui")
+//                    ImGui.text(exception?.stackTraceToString() ?: "")
+//                }
+            } catch (e: Exception) {
+                exception = e
+                e.printStackTrace()
             }
         }
 
