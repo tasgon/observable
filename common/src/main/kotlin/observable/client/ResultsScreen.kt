@@ -45,12 +45,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
-    val offset = Vec2(100, 100)
-
-    var alwaysOpen
-        get() = true
-        set(i) {}
-
     val filterBuf = ByteArray(256)
     val filterText get() = filterBuf.cStr
 
@@ -174,7 +168,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         with(dsl) {
             ImGui.setNextWindowPos(startingPos, Cond.Once)
             ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Individual Results ($ticks ticks processed)", ::alwaysOpen) {
+            window("Individual Results ($ticks ticks processed)", null) {
                 ImGui.inputText("Filter", filterBuf)
                 entryMap.forEach { (dim, vals) ->
                     val filtered = vals.filter { filterBuf.cStr.lowercase() in it.type.lowercase()
@@ -205,7 +199,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
             ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
             ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Chunks", ::alwaysOpen) {
+            window("Chunks", null) {
                 chunkMap.forEach { (dim, chunks) ->
                     collapsingHeader("$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
                             " (${chunks.size} items)") {
@@ -234,7 +228,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
             ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
             ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Aggregated Results", ::alwaysOpen) {
+            window("Aggregated Results", null) {
                 ImGui.columns(2, "aggResCol", false)
                 ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
                 typeTimingsMap.forEach { (type, rate, ticks) ->
@@ -248,7 +242,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
             ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
             ImGui.setNextWindowSize(indivSize, Cond.Once)
-            window("Settings", ::alwaysOpen) {
+            window("Settings", null) {
                 with(Settings) {
                     try {
                         ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
