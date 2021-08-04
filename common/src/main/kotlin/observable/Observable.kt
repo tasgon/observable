@@ -103,7 +103,7 @@ object Observable {
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerCompleted
         }
 
-        CHANNEL.registerCompressed { t: S2CPacket.ProfilingResult, supplier ->
+        CHANNEL.register { t: S2CPacket.ProfilingResult, supplier ->
             RESULTS = t.data
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
