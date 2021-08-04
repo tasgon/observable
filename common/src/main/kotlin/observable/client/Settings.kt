@@ -21,4 +21,7 @@ object Settings {
             (Minecraft.getInstance().screen as? ResultsScreen)?.loadData()
             Overlay.loadSync()
         }
+
+    var maxBlockCount: Int = 2000
+    var maxEntityCount: Int = 2000
 }

@@ -39,6 +39,7 @@ class BetterChannel(id: ResourceLocation) {
             val KNOWN_TYPES = HashMap<String, KType>()
             val ACTIONS = HashMap<KType, (Any, Supplier<NetworkManager.PacketContext>) -> Unit>()
             val PACKET_SIZE = 1000000
+//            val PACKET_SIZE = 100
 
             @OptIn(ExperimentalStdlibApi::class)
             inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
@@ -57,15 +58,26 @@ class BetterChannel(id: ResourceLocation) {
             }
 
             fun enqueue(packet: PartialPacketData, supplier: Supplier<NetworkManager.PacketContext>) {
-                MAP[packet.id]?.packets?.add(packet.index, packet.data)
+                MAP[packet.id]?.let {
+                    it.packets[packet.index] = packet.data
+                    if (packet.length == it.packets.size) {
+                        LOGGER.info("Assembling packet ${it.type}")
+                        it.assemble()?.let { pkt ->
+                            ACTIONS[it.type]?.invoke(pkt, supplier)
+                        }
+                        MAP.remove(packet.id)
+                    }
+                }
             }
         }
-        var packets = ArrayList<ByteArray>()
+        var packets = mutableMapOf<Int, ByteArray>()
 
         @OptIn(ExperimentalSerializationApi::class)
         fun assemble(): Any? {
             val bs = ByteArrayOutputStream()
-            packets.forEach(bs::writeBytes)
+            packets.toList().sortedBy { it.first }.forEach {
+                bs.writeBytes(it.second)
+            }
             bs.close()
             return try {
                 ProtoBuf.decodeFromByteArray(serializer(type), bs.toByteArray())
@@ -79,11 +91,13 @@ class BetterChannel(id: ResourceLocation) {
 
     init {
         this.register { t: PartialPacketBegin, supplier ->
+            LOGGER.info("Received starting packet ${t.id} for ${t.type}")
             val type = PartialPacketAssembler.KNOWN_TYPES[t.type]
-            if (type != null) PartialPacketAssembler.MAP.put(t.id, PartialPacketAssembler(type))
+            if (type != null) PartialPacketAssembler.MAP[t.id] = PartialPacketAssembler(type)
             else LOGGER.warn("Could not find mapping for ${t.type}")
         }
         this.register { t: PartialPacketData, supplier ->
+            LOGGER.info("Received packet ${t.index + 1}/${t.length} of id ${t.id}")
             PartialPacketAssembler.enqueue(t, supplier)
         }
     }
@@ -145,7 +159,7 @@ class BetterChannel(id: ResourceLocation) {
         val bs = ByteArrayInputStream(data)
         val id = UUID.randomUUID().leastSignificantBits
         rawChannel.sendToPlayers(players, PartialPacketBegin(id, T::class.java.name))
-        val size = bs.available() / PartialPacketAssembler.PACKET_SIZE
+        val size = bs.available() / (PartialPacketAssembler.PACKET_SIZE + 1) + 1
         var idx = 0
         while (bs.available() > 0) {
             val data = bs.readNBytes(PartialPacketAssembler.PACKET_SIZE)

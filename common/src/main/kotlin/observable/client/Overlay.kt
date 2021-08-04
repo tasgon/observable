@@ -12,8 +12,10 @@ import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
+import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -48,9 +50,12 @@ object Overlay {
     var enabled = true
     var entities: List<Entry.EntityEntry> = ArrayList()
     var blocks: List<Entry.BlockEntry> = ArrayList()
+    var blockMap = mapOf<ChunkPos, List<Entry.BlockEntry>>()
     lateinit var loc: Vec3
     var vertexBuf: VertexBuffer? = null
     var dataAvailable = false
+
+    val DIST_FAC = 1.0 / (2*16.pow(2)).pow(.5F)
 
     val font: Font by lazy { Minecraft.getInstance().font }
     @Suppress("INACCESSIBLE_TYPE")
@@ -84,6 +89,7 @@ object Overlay {
         blocks = data.blocks[levelLocation]?.map {
             Entry.BlockEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
         }?.filter { it.rate >= Settings.minRate }.orEmpty()
+        blockMap = blocks.groupBy { ChunkPos(it.pos) }
 
         dataAvailable = true
 
@@ -116,13 +122,18 @@ object Overlay {
         }
 
         synchronized(this) {
-
-            for (entry in blocks) {
-                if (camera.blockPosition.distSqr(entry.pos) > Settings.maxBlockDist.pow(2)) continue
-                drawBlock(entry, poseStack, camera, bufSrc)
+            val cpos = ChunkPos(Minecraft.getInstance().player!!.blockPosition())
+            val dist = (Settings.maxBlockDist / 16).coerceAtLeast(2)
+            for (x in (cpos.x - dist)..(cpos.x + dist)) {
+                for (y in (cpos.z - dist)..(cpos.z + dist)) {
+                    blockMap[ChunkPos(x, y)]?.forEach { entry ->
+                        if (camera.blockPosition.distSqr(entry.pos) < Settings.maxBlockDist.pow(2)) {
+                            drawBlock(entry, poseStack, camera, bufSrc)
+                        }
+                    }
+                }
             }
-
-            for (entry in entities) {
+            if (entities.size < Settings.maxEntityCount) for (entry in entities) {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
