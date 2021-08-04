@@ -1,6 +1,7 @@
 package observable.server
 
 import ProfilingData
+import kotlinx.serialization.Serializable
 import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.core.BlockPos
@@ -19,7 +20,12 @@ import observable.net.S2CPacket
 import java.util.*
 import kotlin.concurrent.schedule
 
+inline val StackTraceElement.classMethod get() = "${this.className} + ${this.methodName}"
+
 class Profiler {
+    @Serializable
+    class TraceMap(val trace: String, val children: Array<TraceMap>, val count: Int = 0)
+
     data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>, var name: String = "")
 
     var timingsMap = HashMap<Entity, TimingData>()

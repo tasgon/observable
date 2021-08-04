@@ -2,9 +2,7 @@ package observable.client
 
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.vertex.DefaultVertexFormat
-import com.mojang.blaze3d.vertex.PoseStack
-import com.mojang.blaze3d.vertex.VertexConsumer
+import com.mojang.blaze3d.vertex.*
 import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
@@ -16,6 +14,8 @@ import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.BlockPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
+import org.lwjgl.opengl.GL11
+import org.lwjgl.opengl.GL20
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -51,6 +51,8 @@ object Overlay {
     var entities: List<Entry.EntityEntry> = ArrayList()
     var blocks: List<Entry.BlockEntry> = ArrayList()
     lateinit var loc: Vec3
+    var vertexBuf: VertexBuffer? = null
+    var dataAvailable = false
 
     val font: Font by lazy { Minecraft.getInstance().font }
     @Suppress("INACCESSIBLE_TYPE")
@@ -84,6 +86,9 @@ object Overlay {
         blocks = data.blocks[levelLocation]?.map {
             Entry.BlockEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
         }?.filter { it.rate >= Settings.minRate }.orEmpty()
+
+        dataAvailable = true
+
     }
 
     inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) {
@@ -96,26 +101,42 @@ object Overlay {
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
         val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
 
+
         RenderSystem.disableDepthTest()
         RenderSystem.enableBlend()
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA)
 
         poseStack.pushPose()
 
+        if (dataAvailable) {
+            createVBO(poseStack, camera)
+            dataAvailable = false
+        }
+
         camera.position.apply {
             poseStack.translate(-x, -y, -z)
         }
 
         synchronized(this) {
+
             for (entry in blocks) {
                 if (camera.blockPosition.distSqr(entry.pos) > Settings.maxDist.pow(2)) continue
-                drawBlockOutline(entry, poseStack, camera, bufSrc)
+//                drawBlockOutline(entry, poseStack, camera, buf)
                 drawBlock(entry, poseStack, camera, bufSrc)
             }
 
             for (entry in entities) {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
+
+            renderType.setupRenderState()
+            vertexBuf?.bind()
+            DefaultVertexFormat.POSITION_COLOR.setupBufferState(0)
+            vertexBuf?.draw(poseStack.last().pose(), renderType.mode())
+            VertexBuffer.unbind()
+            RenderSystem.clearCurrentColor()
+            DefaultVertexFormat.POSITION_COLOR.clearBufferState()
+            renderType.clearRenderState()
         }
 
         poseStack.popPose()
@@ -123,6 +144,25 @@ object Overlay {
 
         // Cleanup
         RenderSystem.enableDepthTest()
+    }
+
+    fun createVBO(poseStack: PoseStack, camera: Camera) {
+        Observable.LOGGER.info("Initializing VBO")
+        vertexBuf?.close()
+        val buf = BufferBuilder(renderType.bufferSize() * blocks.size)
+        buf.begin(renderType.mode(), renderType.format())
+
+        var stack = PoseStack()
+
+        for (entry in blocks) {
+            drawBlockOutline(entry, stack, camera, buf)
+        }
+
+        buf.end()
+        val vbuf = VertexBuffer(DefaultVertexFormat.POSITION_COLOR)
+        vbuf.upload(buf)
+        vertexBuf = vbuf
+        dataAvailable = false
     }
 
     inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
@@ -153,8 +193,8 @@ object Overlay {
     }
 
     private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack,
-                                        camera: Camera, bufSrc: MultiBufferSource) {
-        val buf = bufSrc.getBuffer(renderType)
+                                        camera: Camera, buf: VertexConsumer) {
+//        val buf = bufSrc.getBuffer(renderType)
 
         poseStack.pushPose()
 
