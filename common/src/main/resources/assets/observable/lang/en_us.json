@@ -10,6 +10,7 @@
   "text.observable.no_permissions": "You don't have permissions to start a profiler",
   "text.observable.error": "Error performing action: %s",
   "text.observable.report": "Please report this at github.com/tasgon/observable/issues",
+  "text.observable.entity_not_found": "Entity not found in %s. Perhaps it died or was otherwise removed?",
   "text.observable.results": "Results",
   "text.observable.overlay": "Overlay",
   "text.observable.docs": "Learn",

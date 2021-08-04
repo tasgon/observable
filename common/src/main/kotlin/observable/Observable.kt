@@ -10,6 +10,7 @@ import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.TextComponent
+import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
@@ -78,7 +79,8 @@ object Observable {
                         (level as Level).getEntity(it)?.position()?.apply {
                             LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
                             player.moveTo(this)
-                        }
+                        } ?: player.displayClientMessage(
+                            TranslatableComponent("text.observable.entity_not_found", t.level.toString()), true)
                     }
                 }
             }

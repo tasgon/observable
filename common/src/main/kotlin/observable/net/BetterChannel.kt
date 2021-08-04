@@ -75,7 +75,7 @@ class BetterChannel(id: ResourceLocation) {
         fun assemble(): Any? {
             val bs = ByteArrayOutputStream()
             packets.toList().sortedBy { it.first }.forEach {
-                bs.writeBytes(it.second)
+                bs.write(it.second)
             }
             bs.close()
             return try {
@@ -144,7 +144,7 @@ class BetterChannel(id: ResourceLocation) {
             buf.writeByteArray(bs.toByteArray())
         }, attempt {
             val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
-            ProtoBuf.decodeFromByteArray<T>(istream.readAllBytes())
+            ProtoBuf.decodeFromByteArray<T>(istream.readBytes())
         }, validate(consumer))
         LOGGER.info("Registered ${T::class.java}")
     }
