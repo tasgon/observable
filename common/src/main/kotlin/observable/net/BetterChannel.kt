@@ -162,8 +162,9 @@ class BetterChannel(id: ResourceLocation) {
                 (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
         var idx = 0
         while (bs.available() > 0) {
-            val data = bs.readNBytes(PartialPacketAssembler.PACKET_SIZE)
-            rawChannel.sendToPlayers(players, PartialPacketData(id, data, idx, size))
+            val arr = ByteArray(bs.available().coerceAtMost(PartialPacketAssembler.PACKET_SIZE))
+            bs.read(arr)
+            rawChannel.sendToPlayers(players, PartialPacketData(id, arr, idx, size))
             idx++
         }
     }
