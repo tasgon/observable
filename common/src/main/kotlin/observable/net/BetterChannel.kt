@@ -1,44 +1,126 @@
 package observable.net
 
 import kotlinx.serialization.*
+import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.protobuf.ProtoBuf
 import me.shedaniel.architectury.networking.NetworkChannel
 import me.shedaniel.architectury.networking.NetworkManager
+import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import observable.Observable
+import org.apache.logging.log4j.LogManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.lang.Exception
+import java.util.*
 import java.util.function.Supplier
 import java.util.zip.*
+import kotlin.collections.HashMap
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
-class BetterChannel(val id: ResourceLocation) {
+class BetterChannel(id: ResourceLocation) {
+    companion object {
+        val LOGGER = LogManager.getLogger("ObservableNet")
+    }
     var rawChannel = NetworkChannel.create(id)
+
+    @Serializable
+    data class PartialPacketBegin(val id: Long, val type: String)
+
+    @Serializable
+    class PartialPacketData(val id: Long, val data: ByteArray, val index: Int, val length: Int)
+
+    class PartialPacketAssembler(val type: KType) {
+        companion object {
+            val MAP = HashMap<Long, PartialPacketAssembler>()
+            val KNOWN_TYPES = HashMap<String, KType>()
+            val ACTIONS = HashMap<KType, (Any, Supplier<NetworkManager.PacketContext>) -> Unit>()
+            val PACKET_SIZE = 1000000
+
+            @OptIn(ExperimentalStdlibApi::class)
+            inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
+                val type = typeOf<T>()
+                KNOWN_TYPES[T::class.java.name] = type
+                ACTIONS[type] = { obj, ctx ->
+                    var data: T? = null
+                    try {
+                        data = obj as T
+                    } catch (e: Exception) {
+                        LOGGER.warn("Error casting partial packet data to type ${T::class}!")
+                        e.printStackTrace()
+                    }
+                    data?.let { consumer(it, ctx) }
+                }
+            }
+
+            fun enqueue(packet: PartialPacketData, supplier: Supplier<NetworkManager.PacketContext>) {
+                MAP[packet.id]?.packets?.add(packet.index, packet.data)
+            }
+        }
+        var packets = ArrayList<ByteArray>()
+
+        @OptIn(ExperimentalSerializationApi::class)
+        fun assemble(): Any? {
+            val bs = ByteArrayOutputStream()
+            packets.forEach(bs::writeBytes)
+            bs.close()
+            return try {
+                ProtoBuf.decodeFromByteArray(serializer(type), bs.toByteArray())
+            } catch (e: Exception) {
+                LOGGER.warn("Error decoding packet of type $type!")
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    init {
+        this.register { t: PartialPacketBegin, supplier ->
+            val type = PartialPacketAssembler.KNOWN_TYPES[t.type]
+            if (type != null) PartialPacketAssembler.MAP.put(t.id, PartialPacketAssembler(type))
+            else LOGGER.warn("Could not find mapping for ${t.type}")
+        }
+        this.register { t: PartialPacketData, supplier ->
+            PartialPacketAssembler.enqueue(t, supplier)
+        }
+    }
+
+    /**
+     * Provide a function that will attempt to call another function with packet data and fail gracefully if not able.
+     *
+     * @param action The function to call
+     */
+    inline fun <reified T> attempt(crossinline action: (FriendlyByteBuf) -> T): (FriendlyByteBuf) -> T? = {
+        try {
+            action(it)
+        } catch (e: Exception) {
+            LOGGER.warn("Error decoding packet!")
+            e.printStackTrace()
+            null
+        }
+    }
 
     inline fun <reified T> validate(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) =
         { t: T?, v: Supplier<NetworkManager.PacketContext> ->
             if (t != null) consumer(t, v)
         }
 
+    @OptIn(ExperimentalSerializationApi::class)
     inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
-        Observable.LOGGER.info("Registering ${T::class.java}")
+        LOGGER.info("Registering ${T::class.java}")
+        PartialPacketAssembler.register(consumer)
         rawChannel.register(T::class.java, { t, buf ->
             buf.writeByteArray(ProtoBuf.encodeToByteArray(t))
-        }, { buf ->
-            try {
-                ProtoBuf.decodeFromByteArray<T>(buf.readByteArray())
-            } catch (e: Exception) {
-                Observable.LOGGER.warn("Error decoding packet!")
-                e.printStackTrace()
-                null
-            }
-        }, validate(consumer))
-        Observable.LOGGER.info("Registered ${T::class.java}")
+        }, attempt { ProtoBuf.decodeFromByteArray<T>(it.readByteArray()) }, validate(consumer))
+        LOGGER.info("Registered ${T::class.java}")
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     inline fun <reified T> registerCompressed(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
-        Observable.LOGGER.info("Registering ${T::class.java}")
+        LOGGER.info("Registering ${T::class.java}")
         rawChannel.register(T::class.java, { t, buf ->
             val bs = ByteArrayOutputStream()
             val deflater = Deflater()
@@ -47,21 +129,30 @@ class BetterChannel(val id: ResourceLocation) {
             deflaterStream.write(ProtoBuf.encodeToByteArray(t))
             deflaterStream.close()
             buf.writeByteArray(bs.toByteArray())
-        }, { buf ->
-            try {
-                val istream = InflaterInputStream(ByteArrayInputStream(buf.readByteArray()))
-                ProtoBuf.decodeFromByteArray<T>(istream.readAllBytes())
-            } catch (e: Exception) {
-                Observable.LOGGER.warn("Error decoding packet!")
-                e.printStackTrace()
-                null
-            }
+        }, attempt {
+            val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
+            ProtoBuf.decodeFromByteArray<T>(istream.readAllBytes())
         }, validate(consumer))
-        Observable.LOGGER.info("Registered ${T::class.java}")
+        LOGGER.info("Registered ${T::class.java}")
     }
 
     fun <T> sendToPlayers(players: List<ServerPlayer>, msg: T) = rawChannel.sendToPlayers(players, msg)
     fun <T> sendToPlayer(player: ServerPlayer, msg: T) = rawChannel.sendToPlayer(player, msg)
+
+    @OptIn(ExperimentalStdlibApi::class)
+    inline fun <reified T> sendToPlayersSplit(players: List<ServerPlayer>, msg: T) {
+        val data = ProtoBuf.encodeToByteArray(msg)
+        val bs = ByteArrayInputStream(data)
+        val id = UUID.randomUUID().leastSignificantBits
+        rawChannel.sendToPlayers(players, PartialPacketBegin(id, T::class.java.name))
+        val size = bs.available() / PartialPacketAssembler.PACKET_SIZE
+        var idx = 0
+        while (bs.available() > 0) {
+            val data = bs.readNBytes(PartialPacketAssembler.PACKET_SIZE)
+            rawChannel.sendToPlayers(players, PartialPacketData(id, data, idx, size))
+            idx++
+        }
+    }
 
     fun <T> sendToServer(msg: T) = rawChannel.sendToServer(msg)
 }

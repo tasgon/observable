@@ -98,7 +98,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         })
         val donateBtn = addButton(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
             width, 20, TranslatableComponent("text.observable.donate")) {
-
+            openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
         })
 
         this.startBtn = startBtn

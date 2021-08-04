@@ -101,7 +101,7 @@ class Profiler {
             ticks = GameInstance.getServer()!!.tickCount - startingTicks
         }
         val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
-        Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
+        Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingCompleted)
         val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks)
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data (${data.entities.size} (block)entities logged)")
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")

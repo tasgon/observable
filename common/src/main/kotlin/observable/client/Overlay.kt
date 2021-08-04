@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.blaze3d.vertex.VertexConsumer
 import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
@@ -53,13 +54,13 @@ object Overlay {
 
     val font: Font by lazy { Minecraft.getInstance().font }
     @Suppress("INACCESSIBLE_TYPE")
-    private val renderType: RenderType get() {
-        return RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
+    private val renderType: RenderType by lazy {
+        RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
             RenderType.CompositeState.builder()
                 .setTextureState(RenderStateShard.TextureStateShard())
                 .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
                 .setTransparencyState(
-                    RenderStateShard.TransparencyStateShard("translucent_transparency",
+                    RenderStateShard.TransparencyStateShard("src_to_one",
                         {
                             RenderSystem.enableBlend()
                             RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE)

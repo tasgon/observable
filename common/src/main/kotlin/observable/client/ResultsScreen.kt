@@ -2,6 +2,8 @@ package observable.client
 
 import ChunkMap
 import com.mojang.blaze3d.vertex.PoseStack
+import glm_.vec2.Vec2
+import imgui.Cond
 import imgui.ImGui
 import imgui.cStr
 import imgui.classes.Context
@@ -42,6 +44,8 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             inited = true
         }
     }
+
+    val offset = Vec2(100, 100)
 
     var alwaysOpen
         get() = true
@@ -164,8 +168,14 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         ImGui.newFrame()
 
 //        ImGui.showDemoWindow(booleanArrayOf(true))
+        val size = implGlfw.window.size
+
+        val indivSize = Vec2((size.x - 300) / 2, (size.y - 300) / 2)
+
 
         with(dsl) {
+            ImGui.setNextWindowPos(Vec2(100, 100), Cond.Once)
+            ImGui.setNextWindowSize(indivSize, Cond.Once)
             window("Individual Results ($ticks ticks processed)", ::alwaysOpen) {
                 ImGui.inputText("Filter", filterBuf)
                 val width = ImGui.windowWidth
