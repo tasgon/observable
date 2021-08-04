@@ -3,8 +3,8 @@ package observable.net
 import kotlinx.serialization.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.protobuf.ProtoBuf
-import me.shedaniel.architectury.networking.NetworkChannel
-import me.shedaniel.architectury.networking.NetworkManager
+import dev.architectury.networking.NetworkChannel
+import dev.architectury.networking.NetworkManager
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer

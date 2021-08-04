@@ -56,7 +56,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     override fun init() {
         super.init()
 
-        val startBtn = addButton(Button(
+
+        val startBtn = addRenderableWidget(Button(
             0, height / 2 - 28, 100, 20, TranslatableComponent("text.observable.profile_tps")
         ) {
             val duration = (action as Action.NewProfile).duration
@@ -66,14 +67,14 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
         startBtn.x = width / 2 - startBtn.width - 4
 
-        fpsBtn = addButton(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height,
+        fpsBtn = addRenderableWidget(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height,
                 fpsText) { }) as Button
         fpsBtn.active = false
-        resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
+        resultsBtn = addRenderableWidget(Button(startBtn.x, startBtn.y + startBtn.height + 16,
                 fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) {
             Minecraft.getInstance().setScreen(ResultsScreen())
         })
-        overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
+        overlayBtn = addRenderableWidget(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
             if (it) synchronized(Overlay) {
                 Overlay.load()
@@ -88,15 +89,15 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         }
 
         val width = resultsBtn.width / 3 - 2
-        val learnBtn = addButton(Button(startBtn.x, overlayBtn.y + overlayBtn.height + 8,
+        val learnBtn = addRenderableWidget(Button(startBtn.x, overlayBtn.y + overlayBtn.height + 8,
             width, 20, TranslatableComponent("text.observable.docs")) {
             openLink("https://github.com/tasgon/observable/wiki")
         })
-        val helpBtn = addButton(Button(learnBtn.x + learnBtn.width + 4, learnBtn.y,
+        val helpBtn = addRenderableWidget(Button(learnBtn.x + learnBtn.width + 4, learnBtn.y,
             width, 20, TranslatableComponent("text.observable.discord")) {
             openLink("https://discord.gg/sfPbb3b5tF")
         })
-        val donateBtn = addButton(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
+        val donateBtn = addRenderableWidget(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
             width, 20, TranslatableComponent("text.observable.donate")) {
             openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
         })
@@ -111,6 +112,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     override fun render(poseStack: PoseStack, i: Int, j: Int, f: Float) {
         GuiComponent.drawCenteredString(poseStack, this.font, action.statusMsg,
             width / 2, startBtn!!.y - this.font.lineHeight - 4, 0xFFFFFF)
+
 
         super.render(poseStack, i, j, f)
     }

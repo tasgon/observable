@@ -8,7 +8,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import observable.Observable;
 import observable.Props;
 import observable.server.Profiler;
@@ -26,7 +26,7 @@ public class LevelMixin {
      * @author .
      */
     @Overwrite
-    public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
+    public <T extends Entity> void guardEntityTick(Consumer<Entity> consumer, T entity) {
         try {
             if (Props.notProcessing) consumer.accept(entity);
             else {
@@ -48,15 +48,16 @@ public class LevelMixin {
     }
 
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
-    public void redirectTick(TickableBlockEntity blockEntity) {
+            target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
+    public void redirectTick(TickingBlockEntity blockEntity) {
         if (Props.notProcessing) blockEntity.tick();
         else {
             if ((Object)this instanceof ServerLevel) {
                 long start = System.nanoTime();
                 blockEntity.tick();
                 long end = System.nanoTime();
-                Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity, end - start);
+                Observable.INSTANCE.getPROFILER().processBlockEntity(blockEntity, end - start,
+                        (Level)(Object)this);
             } else {
                 blockEntity.tick();
             }

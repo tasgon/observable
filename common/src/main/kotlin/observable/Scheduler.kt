@@ -1,6 +1,6 @@
 package observable
 
-import me.shedaniel.architectury.event.events.TickEvent
+import dev.architectury.event.events.common.TickEvent
 
 class Scheduler {
     companion object {

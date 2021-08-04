@@ -2,11 +2,11 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import me.shedaniel.architectury.event.events.TickEvent
-import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
-import me.shedaniel.architectury.event.events.client.ClientTickEvent
-import me.shedaniel.architectury.registry.KeyBindings
-import me.shedaniel.architectury.utils.GameInstance
+import dev.architectury.event.events.common.TickEvent
+import dev.architectury.event.events.client.ClientLifecycleEvent
+import dev.architectury.event.events.client.ClientTickEvent
+import dev.architectury.registry.client.keymappings.KeyMappingRegistry
+import dev.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.TextComponent
@@ -131,7 +131,7 @@ object Observable {
 
     @JvmStatic
     fun clientInit() {
-        KeyBindings.registerKeyBinding(PROFILE_KEYBIND)
+        KeyMappingRegistry.register(PROFILE_KEYBIND)
 
         ClientTickEvent.CLIENT_POST.register {
             if (PROFILE_KEYBIND.consumeClick()) {
@@ -139,7 +139,7 @@ object Observable {
             }
         }
 
-        ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
+        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register {
             PROFILE_SCREEN.action = ProfileScreen.Action.UNAVAILABLE
             Overlay.loadSync(it)
         }

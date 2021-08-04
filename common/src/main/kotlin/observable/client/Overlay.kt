@@ -58,22 +58,42 @@ object Overlay {
     val DIST_FAC = 1.0 / (2*16.pow(2)).pow(.5F)
 
     val font: Font by lazy { Minecraft.getInstance().font }
+
+    class OverlayRenderType(name: String, fmt: VertexFormat, mode: VertexFormat.Mode) :
+            RenderType(name, fmt,
+            VertexFormat.Mode.QUADS, 256, false, true, {}, {}) {
+        companion object {
+            fun build(): RenderType {
+                val fn = RenderType::class.java.getDeclaredMethod("create",
+                        String::class.java, VertexFormat::class.java, VertexFormat.Mode::class.java,
+                        Integer.TYPE, RenderType.CompositeState::class.java)
+                fn.isAccessible = true
+
+                return fn.invoke(null, "heat", DefaultVertexFormat.POSITION_COLOR,
+                        VertexFormat.Mode.QUADS, 256, buildCompositeState()) as RenderType
+            }
+
+            private fun buildCompositeState(): CompositeState {
+                return RenderType.CompositeState.builder()
+                        .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
+                        .setTransparencyState(
+                                RenderStateShard.TransparencyStateShard("src_to_one",
+                                        {
+                                            RenderSystem.enableBlend()
+                                            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
+                                                    GlStateManager.DestFactor.ONE)
+                                        }
+                                ) {
+                                    RenderSystem.disableBlend()
+                                    RenderSystem.defaultBlendFunc()
+                                }).createCompositeState(true)
+            }
+        }
+    }
+
     @Suppress("INACCESSIBLE_TYPE")
     private val renderType: RenderType by lazy {
-        RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
-            RenderType.CompositeState.builder()
-                .setTextureState(RenderStateShard.TextureStateShard())
-                .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
-                .setTransparencyState(
-                    RenderStateShard.TransparencyStateShard("src_to_one",
-                        {
-                            RenderSystem.enableBlend()
-                            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE)
-                        }
-                    ) {
-                        RenderSystem.disableBlend()
-                        RenderSystem.defaultBlendFunc()
-                    }).createCompositeState(true))
+        OverlayRenderType.build()
     }
 
     fun load(lvl: ClientLevel? = null) {
@@ -139,10 +159,9 @@ object Overlay {
 
             renderType.setupRenderState()
             vertexBuf?.bind()
-            DefaultVertexFormat.POSITION_COLOR.setupBufferState(0)
-            vertexBuf?.draw(poseStack.last().pose(), renderType.mode())
+            DefaultVertexFormat.POSITION_COLOR.setupBufferState()
+            vertexBuf?.draw()
             VertexBuffer.unbind()
-            RenderSystem.clearCurrentColor()
             DefaultVertexFormat.POSITION_COLOR.clearBufferState()
             renderType.clearRenderState()
         }
@@ -167,7 +186,7 @@ object Overlay {
         }
 
         buf.end()
-        val vbuf = VertexBuffer(DefaultVertexFormat.POSITION_COLOR)
+        val vbuf = VertexBuffer()
         vbuf.upload(buf)
         vertexBuf = vbuf
         dataAvailable = false
@@ -177,7 +196,7 @@ object Overlay {
                           partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
         val rate = entry.rate
         val entity = entry.entity ?: return
-        if (entity.removed || (entity == Minecraft.getInstance().player
+        if (entity.isRemoved || (entity == Minecraft.getInstance().player
             && entity.deltaMovement.lengthSqr() > .01)) return
 
         poseStack.pushPose()
