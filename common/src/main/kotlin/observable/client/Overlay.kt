@@ -3,11 +3,13 @@ package observable.client
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
+import com.mojang.math.Matrix4f
 import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.multiplayer.ClientLevel
+import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
@@ -15,7 +17,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -75,18 +76,20 @@ object Overlay {
 
             private fun buildCompositeState(): CompositeState {
                 return RenderType.CompositeState.builder()
-                        .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
-                        .setTransparencyState(
-                                RenderStateShard.TransparencyStateShard("src_to_one",
-                                        {
-                                            RenderSystem.enableBlend()
-                                            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
-                                                    GlStateManager.DestFactor.ONE)
-                                        }
-                                ) {
-                                    RenderSystem.disableBlend()
-                                    RenderSystem.defaultBlendFunc()
-                                }).createCompositeState(true)
+                    .setShaderState(ShaderStateShard { GameRenderer.getPositionColorShader() })
+//                    .setTextureState(EmptyTextureStateShard({}, {}))
+                    .setDepthTestState(DepthTestStateShard("always", 519))
+                    .setTransparencyState(
+                            RenderStateShard.TransparencyStateShard("src_to_one",
+                                    {
+                                        RenderSystem.enableBlend()
+                                        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
+                                                GlStateManager.DestFactor.ONE)
+                                    }
+                            ) {
+                                RenderSystem.disableBlend()
+                                RenderSystem.defaultBlendFunc()
+                            }).createCompositeState(true)
             }
         }
     }
@@ -119,7 +122,7 @@ object Overlay {
         this.load(lvl)
     }
 
-    fun render(poseStack: PoseStack, partialTicks: Float) {
+    fun render(poseStack: PoseStack, partialTicks: Float, projection: Matrix4f) {
         if (!enabled) return
 
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
@@ -149,6 +152,7 @@ object Overlay {
                     blockMap[ChunkPos(x, y)]?.forEach { entry ->
                         if (camera.blockPosition.distSqr(entry.pos) < Settings.maxBlockDist.pow(2)) {
                             drawBlock(entry, poseStack, camera, bufSrc)
+//                            drawBlockOutlineTest(entry, poseStack, bufSrc)
                         }
                     }
                 }
@@ -157,13 +161,13 @@ object Overlay {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
-            renderType.setupRenderState()
-            vertexBuf?.bind()
-            DefaultVertexFormat.POSITION_COLOR.setupBufferState()
-            vertexBuf?.draw()
-            VertexBuffer.unbind()
-            DefaultVertexFormat.POSITION_COLOR.clearBufferState()
-            renderType.clearRenderState()
+
+            vertexBuf?.let {
+                RenderSystem.setShader { GameRenderer.getPositionColorShader() }
+                RenderSystem.disableTexture()
+                it.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getPositionColorShader()!!)
+                RenderSystem.enableTexture()
+            }
         }
 
         poseStack.popPose()
@@ -217,6 +221,11 @@ object Overlay {
         }
 
         poseStack.popPose()
+    }
+
+    private inline fun drawBlockOutlineTest(entry: Entry.BlockEntry, poseStack: PoseStack, bufSrc: MultiBufferSource) {
+        val buf = bufSrc.getBuffer(renderType)
+        drawBlockOutline(entry, poseStack, buf)
     }
 
     private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack, buf: VertexConsumer) {

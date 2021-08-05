@@ -7,6 +7,6 @@ import observable.client.Overlay
 object ForgeClientHooks {
     @SubscribeEvent
     fun onRender(ev: RenderWorldLastEvent) {
-        Overlay.render(ev.matrixStack, ev.partialTicks)
+        Overlay.render(ev.matrixStack, ev.partialTicks, ev.projectionMatrix)
     }
 }
