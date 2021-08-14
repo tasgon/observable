@@ -84,7 +84,7 @@ class Profiler {
         player = ctx.player as? ServerPlayer
         timingsMap.clear()
         blockTimingsMap.clear()
-        val start = System.nanoTime()
+        val start = System.currentTimeMillis()
         synchronized(Props.notProcessing) {
             notProcessing = false
             startingTicks = GameInstance.getServer()!!.tickCount
@@ -92,7 +92,7 @@ class Profiler {
         duration?.let {
             val durMs = duration.toLong() * 1000L
             Observable.CHANNEL.sendToPlayers(GameInstance.getServer()!!.playerList.players,
-                S2CPacket.ProfilingStarted(start + durMs * 1000000L))
+                S2CPacket.ProfilingStarted(start + durMs))
             Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
             Timer("Profiler", false).schedule(durMs) {
                 stopRunning()

@@ -100,7 +100,7 @@ object Overlay {
     }
 
     fun render(poseStack: PoseStack, partialTicks: Float) {
-        if (!enabled) return
+        if (!enabled || Observable.RESULTS == null) return
 
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
         val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()

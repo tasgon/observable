@@ -4,6 +4,7 @@ import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
 import me.shedaniel.architectury.event.events.TickEvent
 import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
+import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
@@ -142,8 +143,12 @@ object Observable {
         }
 
         ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
-            PROFILE_SCREEN.action = ProfileScreen.Action.UNAVAILABLE
             Overlay.loadSync(it)
+        }
+
+        ClientPlayerEvent.CLIENT_PLAYER_QUIT.register {
+            RESULTS = null
+            PROFILE_SCREEN.action = ProfileScreen.Action.UNAVAILABLE
         }
     }
 }

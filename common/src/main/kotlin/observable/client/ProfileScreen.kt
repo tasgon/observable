@@ -28,7 +28,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         val statusMsg get() = when (this) {
             is NewProfile -> "Duration (scroll): $duration seconds"
             is TPSProfilerRunning -> "Running for another %.1f seconds"
-                .format(((endTime - System.nanoTime()).toDouble() / 1e9).coerceAtLeast(0.0) )
+                .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0) )
             is TPSProfilerCompleted -> "Profiling finished, please wait..."
             is ObservableStatus -> TranslatableComponent(text).string
         }
