@@ -149,7 +149,8 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     }
 
     override fun keyPressed(keyCode: Int, scanCode: Int, mods: Int): Boolean {
-        if (ImGui.io.wantCaptureKeyboard && keyCode != 256) {
+        if (ImGui.io.wantCaptureKeyboard && keyCode != 256
+            && ImGui.io.keysDown.indices.contains(keyCode)) {
             ImGui.io.keysDown[keyCode] = true
             keyBuf.add(keyCode)
         }
@@ -158,8 +159,10 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     }
 
     override fun keyReleased(keyCode: Int, scanCode: Int, mods: Int): Boolean {
-        ImGui.io.keysDown[keyCode] = false
-        keyBuf.remove(keyCode)
+        if (ImGui.io.keysDown.indices.contains(keyCode)) {
+            ImGui.io.keysDown[keyCode] = false
+            keyBuf.remove(keyCode)
+        }
 
         return super.keyReleased(keyCode, scanCode, mods)
     }

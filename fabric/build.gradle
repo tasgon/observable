@@ -63,6 +63,8 @@ shadowJar {
     configurations = [project.configurations.shadowCommon]
     classifier "dev-shadow"
 
+    exclude "fonts/ArialUni.TTF"
+
     relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
     relocate 'imgui', 'observable.shadow.imgui'
 }
