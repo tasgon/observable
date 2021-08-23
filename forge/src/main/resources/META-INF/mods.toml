@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[35,)"
+loaderVersion = "[37,)"
 issueTrackerURL = "https://github.com/tasgon/observable/issues"
 license = "MPL"
 
@@ -17,21 +17,21 @@ See what's lagging your world.
 [[dependencies.observable]]
 modId = "forge"
 mandatory = true
-versionRange = "[35,)"
+versionRange = "[37,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.observable]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.16.2,)"
+versionRange = "[1.17.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.observable]]
 modId = "architectury"
 mandatory = true
-versionRange = "[1.1.55,)"
+versionRange = "[2.3.23,)"
 ordering = "AFTER"
 side = "BOTH"
 

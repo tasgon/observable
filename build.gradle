@@ -72,6 +72,7 @@ allprojects {
         options.encoding = "UTF-8"
 
         options.release = 16
+
     }
 
     java {

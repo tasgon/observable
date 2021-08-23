@@ -65,13 +65,15 @@ object Overlay {
             VertexFormat.Mode.QUADS, 256, false, true, {}, {}) {
         companion object {
             fun build(): RenderType {
-                val fn = RenderType::class.java.getDeclaredMethod("create",
+                val boolType = java.lang.Boolean.TYPE
+                val field = if (System.getenv("DEV_ENV") != null) "create" else "method_24049"
+                val fn = RenderType::class.java.getDeclaredMethod(field,
                         String::class.java, VertexFormat::class.java, VertexFormat.Mode::class.java,
-                        Integer.TYPE, RenderType.CompositeState::class.java)
+                        Integer.TYPE, boolType, boolType, RenderType.CompositeState::class.java)
                 fn.isAccessible = true
 
                 return fn.invoke(null, "heat", DefaultVertexFormat.POSITION_COLOR,
-                        VertexFormat.Mode.QUADS, 256, buildCompositeState()) as RenderType
+                        VertexFormat.Mode.QUADS, 256, false, false, buildCompositeState()) as RenderType
             }
 
             private fun buildCompositeState(): CompositeState {
