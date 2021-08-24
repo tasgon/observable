@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.entity.TickableBlockEntity;
 import observable.Observable;
 import observable.Props;
 import observable.server.Profiler;
+import observable.server.TaggedSampler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,11 +31,15 @@ public class LevelMixin {
         try {
             if (Props.notProcessing) consumer.accept(entity);
             else {
+                if (Props.entityDepth < 0) Props.entityDepth = Thread.currentThread().getStackTrace().length - 1;
                 if ((Object)this instanceof ServerLevel) {
+                    Profiler.TimingData data = Observable.INSTANCE.getPROFILER().process(entity);
+                    Props.currentTarget.set(data);
                     long start = System.nanoTime();
                     consumer.accept(entity);
-                    long end = System.nanoTime();
-                    Observable.INSTANCE.getPROFILER().process(entity, end - start);
+                    data.setTime(System.nanoTime() - start + data.getTime());
+                    Props.currentTarget.set(null);
+                    data.setTicks(data.getTicks() + 1);
                 } else {
                     consumer.accept(entity);
                 }
@@ -52,11 +57,15 @@ public class LevelMixin {
     public void redirectTick(TickableBlockEntity blockEntity) {
         if (Props.notProcessing) blockEntity.tick();
         else {
+            if (Props.blockEntityDepth < 0) Props.blockEntityDepth = Thread.currentThread().getStackTrace().length - 1;
             if ((Object)this instanceof ServerLevel) {
+                Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity);
+                Props.currentTarget.set(data);
                 long start = System.nanoTime();
                 blockEntity.tick();
-                long end = System.nanoTime();
-                Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity, end - start);
+                data.setTime(System.nanoTime() - start + data.getTime());
+                Props.currentTarget.set(null);
+                data.setTicks(data.getTicks() + 1);
             } else {
                 blockEntity.tick();
             }

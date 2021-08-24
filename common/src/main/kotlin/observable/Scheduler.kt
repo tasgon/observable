@@ -3,6 +3,8 @@ package observable
 import me.shedaniel.architectury.event.events.TickEvent
 
 class Scheduler {
+    val queue = ArrayDeque<() -> Unit>()
+
     companion object {
         val SERVER by lazy { Scheduler() }
     }
@@ -13,7 +15,6 @@ class Scheduler {
         }
     }
 
-    val queue = ArrayDeque<() -> Unit>()
 
     fun enqueue(fn: () -> Unit) = synchronized(queue) { queue.addLast(fn) }
 }

@@ -17,6 +17,7 @@ import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
 import observable.Observable
 import observable.net.C2SPacket
+import observable.server.TraceMap
 import uno.glfw.GlfwWindow
 import java.lang.Exception
 import kotlin.math.min
@@ -48,9 +49,11 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
     var filterBuf = ByteArray(256)
 
-    sealed class ResultsEntry(val type: String, val rate: Double, val ticks: Int) {
-        class EntityEntry(val id: Int, type: String, rate: Double, ticks: Int) : ResultsEntry(type, rate, ticks)
-        class BlockEntry(val pos: BlockPos, type: String, rate: Double, ticks: Int) : ResultsEntry(type, rate, ticks)
+    sealed class ResultsEntry(val type: String, val rate: Double, val ticks: Int, val traces: ProfilingData.SerializedTraceMap) {
+        class EntityEntry(val id: Int, type: String, rate: Double,
+                          ticks: Int, traces: ProfilingData.SerializedTraceMap) : ResultsEntry(type, rate, ticks, traces)
+        class BlockEntry(val pos: BlockPos, type: String, rate: Double,
+                         ticks: Int, traces: ProfilingData.SerializedTraceMap) : ResultsEntry(type, rate, ticks, traces)
 
         fun requestTP(level: ResourceLocation) {
             val req = C2SPacket.RequestTeleport(level,
@@ -86,12 +89,12 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 data.entities[it]?.map {
                     ResultsEntry.EntityEntry(it.obj, it.type,
                         it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
-                        if (norm) ticks else it.ticks)
+                        if (norm) ticks else it.ticks, it.traces)
                 }?.let { list += it }
                 data.blocks[it]?.map {
                     ResultsEntry.BlockEntry(it.obj, it.type,
                         it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
-                        if (norm) ticks else it.ticks)
+                        if (norm) ticks else it.ticks, it.traces)
                 }?.let { list += it }
 
                 entryMap[it] = list.sortedByDescending {
@@ -190,6 +193,19 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
+    fun renderTrace(traceMap: ProfilingData.SerializedTraceMap, max: Int) {
+        for (child in traceMap.children) {
+            val open = ImGui.treeNode(child.methodName)
+            ImGui.nextColumn()
+            ImGui.text("%.2f%%", child.count.toFloat() / max * 100F)
+            ImGui.nextColumn()
+            if (open) {
+                renderTrace(child, max)
+                ImGui.treePop()
+            }
+        }
+    }
+
     inline fun doRender(i: Int, j: Int, f: Float) {
         implGL.newFrame()
         implGlfw.newFrame()
@@ -199,13 +215,14 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         val startingPos = Vec2(100, 100)
         val indivSize = Vec2((size.x - 300) / 2, (size.y - 300) / 2)
 
+        ImGui.showDemoWindow(booleanArrayOf(true))
 
         with(dsl) {
             try {
                 ImGui.setNextWindowPos(startingPos, Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Individual Results ($ticks ticks processed)", null) {
-                    ImGui.columns(2, "searchCol")
+//                    ImGui.columns(2, "searchCol")
                     if (ImGui.inputText("Filter", filterBuf)) { applyMapFilter() }
                     filterMap.forEach { (dim, vals) ->
                         collapsingHeader(
@@ -224,7 +241,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                             vals.subList(individualListingOffset,
                                 min(vals.size, individualListingOffset + NUM_ITEMS)
                             ).forEach {
-                                ImGui.text(it.type)
+                                val open = ImGui.treeNode(it, it.type)
                                 ImGui.nextColumn()
                                 ImGui.text("${(it.rate / 1000).roundToInt()} us/t (${it.ticks} ticks)")
                                 ImGui.nextColumn()
@@ -234,6 +251,12 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                                     }
                                 }
                                 ImGui.nextColumn()
+                                if (open) {
+                                    ImGui.columns(2)
+                                    renderTrace(it.traces, it.traces.count)
+                                    ImGui.treePop()
+                                    ImGui.columns(3, "resCol", false)
+                                }
                             }
                             ImGui.columns(1)
                             if (individualListingOffset != vals.size - NUM_ITEMS

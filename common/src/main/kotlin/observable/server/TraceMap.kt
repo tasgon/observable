@@ -3,19 +3,22 @@ package observable.server
 import kotlin.reflect.KClass
 
 class TraceMap(var className: String, var classMethod: String = "null",
-               val children: MutableMap<MapKey, TraceMap> = mutableMapOf(), var count: Int = 0) {
-    constructor(target: KClass<*>) : this(target.java.name)
+               val children: MutableMap<MapKey, TraceMap> = mutableMapOf(), var count: Int = 0,
+               var initialDepth: Int = 0) {
+    constructor(target: KClass<*>, initialDepth: Int) : this(target.java.name, initialDepth = initialDepth)
 
     data class MapKey(val className: String, val classMethod: String)
 
-    inline fun add(stackTrace: List<StackTraceElement>) {
+    fun add(stackTrace: List<StackTraceElement>) {
         add(stackTrace
+            .asReversed()
+            .drop(initialDepth)
             .asSequence()
-            .dropWhile { it.className != className}
             .iterator())
     }
 
     inline fun add(traces: Iterator<StackTraceElement>) {
+        if (!traces.hasNext()) return
         count += 1
         classMethod = traces.next().classMethod
         var target = this

@@ -4,10 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 object ServerSettings {
+    var traceInterval: Long = 3L;
 
-    var traceInterval: Long = 10000L;
-
-    var deviation: Long = 100L;
+    var deviation: Long = 1L;
 
     var sample: Boolean = true;
 }

@@ -2,14 +2,13 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import me.shedaniel.architectury.event.events.TickEvent
+import me.shedaniel.architectury.event.events.LifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
-import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
@@ -24,8 +23,6 @@ import observable.net.S2CPacket
 import observable.server.Profiler
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import java.util.*
-import kotlin.concurrent.schedule
 
 object Observable {
     const val MOD_ID = "observable"
@@ -98,7 +95,7 @@ object Observable {
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
-            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endNanos)
+            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endMillis)
             PROFILE_SCREEN.startBtn?.active = false
         }
 
@@ -129,6 +126,12 @@ object Observable {
                     PROFILE_SCREEN.startBtn?.active = false
                 }
             }
+        }
+
+        LifecycleEvent.SERVER_STARTED.register {
+            val thread = Thread.currentThread()
+            PROFILER.serverThread = thread
+            LOGGER.info("Registered thread ${thread.name}")
         }
     }
 

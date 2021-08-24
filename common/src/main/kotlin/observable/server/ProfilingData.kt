@@ -99,7 +99,7 @@ data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
         constructor(traceMap: TraceMap) : this(traceMap.className, traceMap.classMethod,
             traceMap.children.map { (_, map) ->
                 SerializedTraceMap(map)
-            }, traceMap.count)
+            }.sortedByDescending { it.count }, traceMap.count)
     }
 }
 

@@ -6,7 +6,7 @@ import java.util.*
 
 class S2CPacket {
     @Serializable
-    data class ProfilingStarted(val endNanos: Long)
+    data class ProfilingStarted(val endMillis: Long)
 
     @Serializable
     object ProfilingCompleted

@@ -1,5 +1,6 @@
 package observable.server
 
+import observable.Observable
 import observable.Props
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -10,7 +11,6 @@ import kotlin.random.Random
  */
 class TaggedSampler(val thread: Thread) : Runnable {
     data class Sample(val target: Profiler.TimingData?, val trace: Array<StackTraceElement>)
-    companion object var target: AtomicReference<Profiler.TimingData?> = AtomicReference(null)
 
     class SamplerProcessor(val entries: ArrayDeque<Sample>) : Runnable {
         @Volatile
@@ -29,10 +29,15 @@ class TaggedSampler(val thread: Thread) : Runnable {
     var entries = ArrayDeque<Sample>()
 
     override fun run() {
+        Observable.LOGGER.info("Started sampler thread")
         val interval = ServerSettings.traceInterval
         val deviation = ServerSettings.deviation
+        var trace: Array<StackTraceElement>
+        var target: Profiler.TimingData
         while (!Props.notProcessing) {
-            entries.addLast(Sample(target.get(), thread.stackTrace))
+            target = Props.currentTarget.get() ?: continue
+            trace = thread.stackTrace
+            target.traces.add(trace.toList())
             Thread.sleep(interval + Random.nextLong(-deviation, deviation))
         }
     }

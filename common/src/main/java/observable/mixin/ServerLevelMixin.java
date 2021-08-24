@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import observable.Observable;
 import observable.Props;
+import observable.server.Profiler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -20,9 +21,14 @@ public class ServerLevelMixin {
     public void onTickLiquid(FluidState state, Level level, BlockPos pos) {
         if (Props.notProcessing) state.tick(level, pos);
         else {
+            if (Props.fluidDepth < 0) Props.fluidDepth = Thread.currentThread().getStackTrace().length - 1;
+            Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processFluid(state, pos, level);
+            Props.currentTarget.set(data);
             long start = System.nanoTime();
             state.tick(level, pos);
-            Observable.INSTANCE.getPROFILER().processFluid(state, pos, level, System.nanoTime() - start);
+            data.setTime(System.nanoTime() - start + data.getTime());
+            Props.currentTarget.set(null);
+            data.setTicks(data.getTicks() + 1);
         }
     }
 
@@ -31,9 +37,14 @@ public class ServerLevelMixin {
     public void onTickBlock(BlockState state, ServerLevel level, BlockPos pos, Random random) {
         if (Props.notProcessing) state.tick(level, pos, random);
         else {
+            if (Props.blockDepth < 0) Props.blockDepth = Thread.currentThread().getStackTrace().length - 1;
+            Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processBlock(state, pos, level);
+            Props.currentTarget.set(data);
             long start = System.nanoTime();
             state.tick(level, pos, random);
-            Observable.INSTANCE.getPROFILER().processBlock(state, pos, level, System.nanoTime() - start);
+            data.setTime(System.nanoTime() - start + data.getTime());
+            Props.currentTarget.set(null);
+            data.setTicks(data.getTicks() + 1);
         }
     }
 }

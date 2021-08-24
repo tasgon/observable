@@ -1,7 +1,6 @@
 package observable.server
 
 import ProfilingData
-import kotlinx.serialization.Serializable
 import me.shedaniel.architectury.networking.NetworkManager
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.core.BlockPos
@@ -26,6 +25,9 @@ class Profiler {
     data class TimingData(var time: Long, var ticks: Int, var traces: TraceMap, var name: String = "")
 
     var timingsMap = HashMap<Entity, TimingData>()
+    lateinit var serverThread: Thread
+    lateinit var samplerThread: Thread
+
     // TODO: consider splitting out block entity timings
 //    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
     var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
@@ -39,43 +41,34 @@ class Profiler {
 
     var startingTicks: Int = 0
 
-    fun process(entity: Entity, time: Long) {
-        val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
-        timingInfo.time += time
-        timingInfo.ticks++
+    fun process(entity: Entity) = timingsMap.getOrPut(entity) {
+        TimingData(0, 0, TraceMap(entity::class, Props.entityDepth))
     }
 
-    fun processBlockEntity(blockEntity: BlockEntity, time: Long) {
-        if (blockEntity.level == null) {
-            Observable.LOGGER.warn("Block entity at ${blockEntity.blockPos} has no associated dimension")
-            return
-        }
-
-        val blockMap = blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
-        val timingInfo = blockMap.getOrPut(blockEntity.blockPos) {
-            TimingData(0, 0, TraceMap(blockEntity::class), blockEntity.blockState.block.descriptionId)
-        }
-        timingInfo.time += time
-        timingInfo.ticks++
+    fun processBlockEntity(blockEntity: BlockEntity) = if (blockEntity.level == null) {
+        Observable.LOGGER.warn("Block entity at ${blockEntity.blockPos} has no associated dimension")
+        TimingData(0, 0, TraceMap(blockEntity::class, Props.blockEntityDepth),
+            blockEntity.blockState.block.descriptionId)
+    } else {
+        blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
+            .getOrPut(blockEntity.blockPos) {
+                TimingData(0, 0, TraceMap(blockEntity::class, Props.blockEntityDepth),
+                    blockEntity.blockState.block.descriptionId)
+            }
     }
 
-    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level, time: Long) {
-        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
-        val timingInfo = blockMap.getOrPut(pos) {
-            TimingData(0, 0, TraceMap(blockState::class), blockState.block.descriptionId)
-        }
-        timingInfo.time += time
-        timingInfo.ticks++
-    }
+    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
+        blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+            .getOrPut(pos) {
+                TimingData(0, 0, TraceMap(blockState::class, Props.blockDepth),
+                    blockState.block.descriptionId)
+            }
 
-    fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level, time: Long) {
-        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
-        val timingInfo = blockMap.getOrPut(pos) {
-            TimingData(0, 0, TraceMap(fluidState::class), Registry.FLUID.getKey(fluidState.type).toString())
+    fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
+        blockTimingsMap.getOrPut(level.dimension()) { HashMap() }.getOrPut(pos) {
+            TimingData(0, 0, TraceMap(fluidState::class, Props.fluidDepth),
+                Registry.FLUID.getKey(fluidState.type).toString())
         }
-        timingInfo.time += time
-        timingInfo.ticks++
-    }
 
     fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
         player = ctx.player as? ServerPlayer
@@ -86,10 +79,14 @@ class Profiler {
             notProcessing = false
             startingTicks = GameInstance.getServer()!!.tickCount
         }
+        samplerThread = Thread(TaggedSampler(serverThread))
+        samplerThread.start()
         duration?.let {
             val durMs = duration.toLong() * 1000L
-            Observable.CHANNEL.sendToPlayers(GameInstance.getServer()!!.playerList.players,
-                S2CPacket.ProfilingStarted(start + durMs))
+            Observable.CHANNEL.sendToPlayers(
+                GameInstance.getServer()!!.playerList.players,
+                S2CPacket.ProfilingStarted(start + durMs)
+            )
             Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
             Timer("Profiler", false).schedule(durMs) {
                 stopRunning()
