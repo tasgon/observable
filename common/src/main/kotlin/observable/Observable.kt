@@ -2,13 +2,11 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import dev.architectury.event.events.common.TickEvent
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientTickEvent
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
-import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
@@ -23,8 +21,6 @@ import observable.net.S2CPacket
 import observable.server.Profiler
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import java.util.*
-import kotlin.concurrent.schedule
 
 object Observable {
     const val MOD_ID = "observable"
@@ -97,7 +93,7 @@ object Observable {
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
-            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endNanos)
+            PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endMillis)
             PROFILE_SCREEN.startBtn?.active = false
         }
 

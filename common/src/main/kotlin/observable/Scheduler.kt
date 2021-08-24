@@ -3,6 +3,8 @@ package observable
 import dev.architectury.event.events.common.TickEvent
 
 class Scheduler {
+    val queue = ArrayDeque<() -> Unit>()
+
     companion object {
         val SERVER by lazy { Scheduler() }
     }
@@ -12,8 +14,6 @@ class Scheduler {
             queue.removeFirstOrNull()?.let { it() }
         }
     }
-
-    val queue = ArrayDeque<() -> Unit>()
 
     fun enqueue(fn: () -> Unit) = synchronized(queue) { queue.addLast(fn) }
 }
