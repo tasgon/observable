@@ -4,7 +4,7 @@
 
 This is a spiritual successor to [LagGoggles](https://www.curseforge.com/minecraft/mc-mods/laggoggles) for Minecraft 1.16 (and hopefully later versions). Licensed under MPLv2.
 
-See [Modrinth](https://modrinth.com/mod/observable) and [CurseForge](https://www.curseforge.com/minecraft/mc-mods/observable) for download links.
+See [CurseForge](https://www.curseforge.com/minecraft/mc-mods/observable) for download links.
 
 ROADMAP:
 
