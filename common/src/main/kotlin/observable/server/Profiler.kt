@@ -23,10 +23,7 @@ import kotlin.concurrent.schedule
 inline val StackTraceElement.classMethod get() = "${this.className} + ${this.methodName}"
 
 class Profiler {
-    @Serializable
-    class TraceMap(val trace: String, val children: Array<TraceMap>, val count: Int = 0)
-
-    data class TimingData(var time: Long, var ticks: Int, var traces: Set<StackTraceElement>, var name: String = "")
+    data class TimingData(var time: Long, var ticks: Int, var traces: TraceMap, var name: String = "")
 
     var timingsMap = HashMap<Entity, TimingData>()
     // TODO: consider splitting out block entity timings
@@ -43,16 +40,7 @@ class Profiler {
     var startingTicks: Int = 0
 
     fun process(entity: Entity, time: Long) {
-        val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, HashSet()) }
-        timingInfo.time += time
-        timingInfo.ticks++
-    }
-
-    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level, time: Long) {
-        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
-        val timingInfo = blockMap.getOrPut(pos) {
-            TimingData(0, 0, HashSet(), blockState.block.descriptionId)
-        }
+        val timingInfo = timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
         timingInfo.time += time
         timingInfo.ticks++
     }
@@ -65,7 +53,16 @@ class Profiler {
 
         val blockMap = blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
         val timingInfo = blockMap.getOrPut(blockEntity.blockPos) {
-            TimingData(0, 0, HashSet(), blockEntity.blockState.block.descriptionId)
+            TimingData(0, 0, TraceMap(blockEntity::class), blockEntity.blockState.block.descriptionId)
+        }
+        timingInfo.time += time
+        timingInfo.ticks++
+    }
+
+    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level, time: Long) {
+        val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+        val timingInfo = blockMap.getOrPut(pos) {
+            TimingData(0, 0, TraceMap(blockState::class), blockState.block.descriptionId)
         }
         timingInfo.time += time
         timingInfo.ticks++
@@ -74,7 +71,7 @@ class Profiler {
     fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level, time: Long) {
         val blockMap = blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
         val timingInfo = blockMap.getOrPut(pos) {
-            TimingData(0, 0, HashSet(), Registry.FLUID.getKey(fluidState.type).toString())
+            TimingData(0, 0, TraceMap(fluidState::class), Registry.FLUID.getKey(fluidState.type).toString())
         }
         timingInfo.time += time
         timingInfo.ticks++

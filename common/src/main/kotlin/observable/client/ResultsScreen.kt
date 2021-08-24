@@ -77,7 +77,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     fun loadData() {
         entryMap.clear()
         dimTimingsMap.clear()
-        val norm = Settings.normalized
+        val norm = ClientSettings.normalized
         Observable.RESULTS?.let { data ->
             ticks = data.ticks
 
@@ -121,7 +121,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         filterMap = entryMap.map { (key, list) ->
             key to list.filter {
                 filterBuf.cStr.lowercase() in it.type.lowercase()
-                        && it.rate >= Settings.minRate
+                        && it.rate >= ClientSettings.minRate
             }
         }.toMap()
         individualListingOffset = 0
@@ -205,6 +205,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(startingPos, Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Individual Results ($ticks ticks processed)", null) {
+                    ImGui.columns(2, "searchCol")
                     if (ImGui.inputText("Filter", filterBuf)) { applyMapFilter() }
                     filterMap.forEach { (dim, vals) ->
                         collapsingHeader(
@@ -298,7 +299,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Settings", null) {
-                    with(Settings) {
+                    with(ClientSettings) {
                         try {
                             ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
                             ImGui.inputInt("Maximum block text distance (m)", ::maxBlockDist)

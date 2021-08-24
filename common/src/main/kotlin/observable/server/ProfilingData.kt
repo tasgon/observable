@@ -16,6 +16,7 @@ import observable.net.BlockPosSerializer
 import observable.net.EntitySerializer
 import observable.net.ResourceLocationSerializer
 import observable.server.Profiler
+import observable.server.TraceMap
 import kotlin.math.roundToInt
 
 @Serializable
@@ -81,15 +82,24 @@ data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
 
     @Serializable
     data class Entry<T>(val obj: T, val type: String, val rate: Double,
-                        val ticks: Int, val traces: List<SerializedStackTrace>) {
+                        val ticks: Int, val traces: SerializedTraceMap) {
         constructor(obj: T, type: String, data: Profiler.TimingData) : this(obj, type,
-            data.time.toDouble() / data.ticks.toDouble(), data.ticks, data.traces.map { SerializedStackTrace(it) })
+            data.time.toDouble() / data.ticks.toDouble(), data.ticks, SerializedTraceMap(data.traces))
     }
 
     @Serializable
     data class SerializedStackTrace(val classname: String, val fileName: String?,
                                     val lineNumber: Int, val methodName: String) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
+    }
+
+    @Serializable
+    data class SerializedTraceMap(val classname: String, val methodName: String,
+                                  val children: List<SerializedTraceMap>, val count: Int) {
+        constructor(traceMap: TraceMap) : this(traceMap.className, traceMap.classMethod,
+            traceMap.children.map { (_, map) ->
+                SerializedTraceMap(map)
+            }, traceMap.count)
     }
 }
 

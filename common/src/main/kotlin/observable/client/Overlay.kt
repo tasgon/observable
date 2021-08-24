@@ -15,7 +15,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -81,14 +80,14 @@ object Overlay {
         val level = lvl ?: Minecraft.getInstance().level ?: return
         val levelLocation = level.dimension().location()
         val ticks = data.ticks
-        val norm = Settings.normalized
+        val norm = ClientSettings.normalized
         entities = data.entities[levelLocation]?.map {
             Entry.EntityEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
-        }?.filter { it.rate >= Settings.minRate }.orEmpty()
+        }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
 
         blocks = data.blocks[levelLocation]?.map {
             Entry.BlockEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
-        }?.filter { it.rate >= Settings.minRate }.orEmpty()
+        }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
         blockMap = blocks.groupBy { ChunkPos(it.pos) }
 
         dataAvailable = true
@@ -123,17 +122,17 @@ object Overlay {
 
         synchronized(this) {
             val cpos = ChunkPos(Minecraft.getInstance().player!!.blockPosition())
-            val dist = (Settings.maxBlockDist / 16).coerceAtLeast(2)
+            val dist = (ClientSettings.maxBlockDist / 16).coerceAtLeast(2)
             for (x in (cpos.x - dist)..(cpos.x + dist)) {
                 for (y in (cpos.z - dist)..(cpos.z + dist)) {
                     blockMap[ChunkPos(x, y)]?.forEach { entry ->
-                        if (camera.blockPosition.distSqr(entry.pos) < Settings.maxBlockDist.pow(2)) {
+                        if (camera.blockPosition.distSqr(entry.pos) < ClientSettings.maxBlockDist.pow(2)) {
                             drawBlock(entry, poseStack, camera, bufSrc)
                         }
                     }
                 }
             }
-            if (entities.size < Settings.maxEntityCount) for (entry in entities) {
+            if (entities.size < ClientSettings.maxEntityCount) for (entry in entities) {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
@@ -183,7 +182,7 @@ object Overlay {
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
-        if (camera.position.distanceTo(pos) > Settings.maxEntityDist) return
+        if (camera.position.distanceTo(pos) > ClientSettings.maxEntityDist) return
         if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
             Vec3(x, y.coerceAtLeast(0.0), z)
         }.scale(partialTicks.toDouble()))

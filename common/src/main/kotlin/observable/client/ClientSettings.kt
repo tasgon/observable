@@ -2,7 +2,7 @@ package observable.client
 
 import net.minecraft.client.Minecraft
 
-object Settings {
+object ClientSettings {
     var minRate: Int = 0
         set(v) {
             field = v
