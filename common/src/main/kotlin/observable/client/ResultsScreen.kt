@@ -215,8 +215,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         val startingPos = Vec2(100, 100)
         val indivSize = Vec2((size.x - 300) / 2, (size.y - 300) / 2)
 
-        ImGui.showDemoWindow(booleanArrayOf(true))
-
         with(dsl) {
             try {
                 ImGui.setNextWindowPos(startingPos, Cond.Once)
@@ -252,8 +250,13 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                                 }
                                 ImGui.nextColumn()
                                 if (open) {
-                                    ImGui.columns(2)
-                                    renderTrace(it.traces, it.traces.count)
+                                    if (it.traces.children.isEmpty()) {
+                                        ImGui.columns(1)
+                                        ImGui.text("No traces caught")
+                                    } else {
+                                        ImGui.columns(2)
+                                        renderTrace(it.traces, it.traces.count)
+                                    }
                                     ImGui.treePop()
                                     ImGui.columns(3, "resCol", false)
                                 }

@@ -70,7 +70,7 @@ class Profiler {
                 Registry.FLUID.getKey(fluidState.type).toString())
         }
 
-    fun startRunning(duration: Int? = null, ctx: NetworkManager.PacketContext) {
+    fun startRunning(duration: Int? = null, sample: Boolean = false, ctx: NetworkManager.PacketContext) {
         player = ctx.player as? ServerPlayer
         timingsMap.clear()
         blockTimingsMap.clear()
@@ -79,8 +79,10 @@ class Profiler {
             notProcessing = false
             startingTicks = GameInstance.getServer()!!.tickCount
         }
-        samplerThread = Thread(TaggedSampler(serverThread))
-        samplerThread.start()
+        if (sample) {
+            samplerThread = Thread(TaggedSampler(serverThread))
+            samplerThread.start()
+        }
         duration?.let {
             val durMs = duration.toLong() * 1000L
             Observable.CHANNEL.sendToPlayers(

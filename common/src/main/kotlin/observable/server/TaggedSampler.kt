@@ -30,15 +30,23 @@ class TaggedSampler(val thread: Thread) : Runnable {
 
     override fun run() {
         Observable.LOGGER.info("Started sampler thread")
-        val interval = ServerSettings.traceInterval
-        val deviation = ServerSettings.deviation
+        val interval = ServerSettings.traceInterval.toLong()
+        val deviation = ServerSettings.deviation.toLong()
         var trace: Array<StackTraceElement>
         var target: Profiler.TimingData
-        while (!Props.notProcessing) {
-            target = Props.currentTarget.get() ?: continue
-            trace = thread.stackTrace
-            target.traces.add(trace.toList())
-            Thread.sleep(interval + Random.nextLong(-deviation, deviation))
+        if (interval > 0) {
+            while (!Props.notProcessing) {
+                target = Props.currentTarget.get() ?: continue
+                trace = thread.stackTrace
+                target.traces.add(trace.toList())
+                Thread.sleep(interval + Random.nextLong(-deviation, deviation))
+            }
+        } else {
+            while (!Props.notProcessing) {
+                target = Props.currentTarget.get() ?: continue
+                trace = thread.stackTrace
+                target.traces.add(trace.toList())
+            }
         }
     }
 

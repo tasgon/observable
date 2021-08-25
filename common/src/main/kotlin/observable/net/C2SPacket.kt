@@ -15,7 +15,7 @@ import observable.client.ProfileScreen
 
 class C2SPacket {
     @Serializable
-    data class InitTPSProfile(val duration: Int)
+    data class InitTPSProfile(val duration: Int, val sample: Boolean)
 
     @Serializable
     data class RequestTeleport(val level: ResourceLocation, val entityId: Int?, val pos: BlockPos?) {

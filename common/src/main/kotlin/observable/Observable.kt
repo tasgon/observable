@@ -2,6 +2,10 @@ package observable
 
 import ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import me.shedaniel.architectury.event.events.CommandRegistrationEvent
 import me.shedaniel.architectury.event.events.LifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
 import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
@@ -9,6 +13,9 @@ import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
 import net.minecraft.client.KeyMapping
+import net.minecraft.commands.CommandSourceStack
+import net.minecraft.commands.Commands.argument
+import net.minecraft.commands.Commands.literal
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
@@ -21,6 +28,8 @@ import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
 import observable.server.Profiler
+import observable.server.ServerSettings
+import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
 
@@ -48,7 +57,7 @@ object Observable {
                 LOGGER.info("${player.name.contents} lacks permissions to start profiling")
                 return@register
             }
-            if (PROFILER.notProcessing) PROFILER.startRunning(t.duration, supplier.get())
+            if (PROFILER.notProcessing) PROFILER.startRunning(t.duration, t.sample, supplier.get())
         }
 
         CHANNEL.register { t: C2SPacket.RequestTeleport, supplier ->
@@ -132,6 +141,34 @@ object Observable {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
             LOGGER.info("Registered thread ${thread.name}")
+        }
+
+        CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
+            val cmd = literal("observable")
+                    .executes {
+                        it.source.sendSuccess(TextComponent(ServerSettings.toString()), false)
+                        1
+                    }
+                .then(literal("set").let {
+                    ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
+                        val argType = TypeMap[field.type] ?: return@fold setCmd
+                        setCmd.then(literal(field.name).then(argument("newVal", argType())
+                            .executes { ctx ->
+                                try {
+                                    field.isAccessible = true
+                                    field.set(ServerSettings, ctx.getArgument("newVal", field.type))
+                                    1
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    ctx.source.sendFailure(TextComponent("Error setting value\n${e.toString()}"))
+                                    0
+                                }
+                            }))
+                    }
+                })
+
+            dispatcher.register(cmd)
+
         }
     }
 

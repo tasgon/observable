@@ -36,6 +36,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
     var action: Action = Action.UNAVAILABLE
     var startBtn: Button? = null
+    var sample = false
     lateinit var fpsBtn: Button
     lateinit var resultsBtn: Button
     lateinit var overlayBtn: BetterCheckbox
@@ -57,10 +58,10 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         super.init()
 
         val startBtn = addButton(Button(
-            0, height / 2 - 28, 100, 20, TranslatableComponent("text.observable.profile_tps")
+            0, height / 2 - 48, 100, 20, TranslatableComponent("text.observable.profile_tps")
         ) {
             val duration = (action as Action.NewProfile).duration
-            Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration))
+            Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
         })
         startBtn.active = action is Action.NewProfile
 
@@ -69,8 +70,15 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         fpsBtn = addButton(Button(width / 2 + 4, startBtn.y, startBtn.width, startBtn.height,
                 fpsText) { }) as Button
         fpsBtn.active = false
-        resultsBtn = addButton(Button(startBtn.x, startBtn.y + startBtn.height + 16,
-                fpsBtn.x + fpsBtn.width - startBtn.x, 20, TranslatableComponent("text.observable.results")) {
+
+        val samplerBtn = addButton(BetterCheckbox(startBtn.x, startBtn.y + startBtn.height + 4,
+            fpsBtn.x + fpsBtn.width - startBtn.x, 20,
+            TranslatableComponent("text.observable.sampler"), sample) {
+            sample = it
+        })
+
+        resultsBtn = addButton(Button(samplerBtn.x, samplerBtn.y + samplerBtn.height + 16,
+                fpsBtn.x + fpsBtn.width - samplerBtn.x, 20, TranslatableComponent("text.observable.results")) {
             Minecraft.getInstance().setScreen(ResultsScreen())
         })
         overlayBtn = addButton(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
