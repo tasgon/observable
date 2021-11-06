@@ -109,5 +109,8 @@ class Profiler {
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))
         Observable.LOGGER.info("Data transfer complete!")
+        GameInstance.getServer()?.playerList?.players?.filter { Observable.hasPermission(it) }?.let {
+            Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive)
+        }
     }
 }

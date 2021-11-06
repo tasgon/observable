@@ -93,7 +93,7 @@ object Observable {
             }
         }
 
-        CHANNEL.register { T: C2SPacket.RequestAvailability, supplier ->
+        CHANNEL.register { t: C2SPacket.RequestAvailability, supplier ->
             (supplier.get().player as? ServerPlayer)?.let {
                 CHANNEL.sendToPlayer(
                     it,
@@ -110,6 +110,11 @@ object Observable {
 
         CHANNEL.register { t: S2CPacket.ProfilingCompleted, supplier ->
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerCompleted
+        }
+
+        CHANNEL.register { t: S2CPacket.ProfilerInactive, supplier ->
+            PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
+            PROFILE_SCREEN.startBtn?.active = true
         }
 
         CHANNEL.register { t: S2CPacket.ProfilingResult, supplier ->
@@ -145,6 +150,7 @@ object Observable {
 
         CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
             val cmd = literal("observable")
+                .requires { it.hasPermission(4) }
                     .executes {
                         it.source.sendSuccess(TextComponent(ServerSettings.toString()), false)
                         1

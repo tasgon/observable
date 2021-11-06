@@ -27,7 +27,7 @@ public class LevelMixin {
      * @author .
      */
     @Overwrite
-    public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
+    public final void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
         try {
             if (Props.notProcessing) consumer.accept(entity);
             else {
@@ -54,7 +54,7 @@ public class LevelMixin {
 
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
-    public void redirectTick(TickableBlockEntity blockEntity) {
+    public final void redirectTick(TickableBlockEntity blockEntity) {
         if (Props.notProcessing) blockEntity.tick();
         else {
             if (Props.blockEntityDepth < 0) Props.blockEntityDepth = Thread.currentThread().getStackTrace().length - 1;

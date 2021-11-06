@@ -39,6 +39,7 @@ subprojects {
         // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
         implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2"
+        implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2"
 
         ["core", "gl", "glfw"].forEach {
             implementation("com.github.kotlin-graphics.imgui:$it:jdk8-SNAPSHOT") {

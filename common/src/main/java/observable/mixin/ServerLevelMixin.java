@@ -18,7 +18,7 @@ import java.util.Random;
 public class ServerLevelMixin {
     @Redirect(method = "tickLiquid", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"))
-    public void onTickLiquid(FluidState state, Level level, BlockPos pos) {
+    public final void onTickLiquid(FluidState state, Level level, BlockPos pos) {
         if (Props.notProcessing) state.tick(level, pos);
         else {
             if (Props.fluidDepth < 0) Props.fluidDepth = Thread.currentThread().getStackTrace().length - 1;
@@ -34,7 +34,7 @@ public class ServerLevelMixin {
 
     @Redirect(method = "tickBlock", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Ljava/util/Random;)V"))
-    public void onTickBlock(BlockState state, ServerLevel level, BlockPos pos, Random random) {
+    public final void onTickBlock(BlockState state, ServerLevel level, BlockPos pos, Random random) {
         if (Props.notProcessing) state.tick(level, pos, random);
         else {
             if (Props.blockDepth < 0) Props.blockDepth = Thread.currentThread().getStackTrace().length - 1;

@@ -12,6 +12,9 @@ class S2CPacket {
     object ProfilingCompleted
 
     @Serializable
+    object ProfilerInactive
+
+    @Serializable
     data class ProfilingResult(val data: ProfilingData)
 
     @Serializable
