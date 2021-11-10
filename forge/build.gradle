@@ -15,7 +15,7 @@ architectury {
 loom {
     useFabricMixin = true
 
-    mixinConfig "mixins.common.json"
+    mixinConfig "observable.common.json"
 }
 
 minecraft {
