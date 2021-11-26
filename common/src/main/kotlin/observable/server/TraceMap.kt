@@ -4,17 +4,22 @@ import kotlin.reflect.KClass
 
 class TraceMap(var className: String, var classMethod: String = "null",
                val children: MutableMap<MapKey, TraceMap> = mutableMapOf(), var count: Int = 0,
-               var initialDepth: Int = 0) {
-    constructor(target: KClass<*>, initialDepth: Int) : this(target.java.name, initialDepth = initialDepth)
+               var initialDepth: Int = 0, var jClass: Class<*>? = null) {
+    constructor(target: KClass<*>, initialDepth: Int) :
+            this(target.java.name,initialDepth = initialDepth, jClass = target.java)
 
     data class MapKey(val className: String, val classMethod: String)
 
     fun add(stackTrace: List<StackTraceElement>) {
-        add(stackTrace
+        val traces = stackTrace
             .asReversed()
             .drop(initialDepth)
             .asSequence()
-            .iterator())
+        if (jClass == null || traces.firstOrNull()?.let { !Class.forName(it.className).isAssignableFrom(jClass) } == true) {
+//            println("${traces.firstOrNull()?.className} not assignable from ${jClass?.name}")
+            return
+        }
+        add(traces.iterator())
     }
 
     inline fun add(traces: Iterator<StackTraceElement>) {
