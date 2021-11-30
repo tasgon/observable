@@ -16,5 +16,6 @@
   "text.observable.overlay": "Overlay",
   "text.observable.docs": "Wiki",
   "text.observable.discord": "Discord",
-  "text.observable.donate": "Donate"
+  "text.observable.donate": "Donate",
+  "text.observable.profile_saved": "Profile saved to %s"
 }

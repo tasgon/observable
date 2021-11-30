@@ -7,17 +7,27 @@ import imgui.*
 import imgui.classes.Context
 import imgui.impl.gl.ImplBestGL
 import imgui.impl.glfw.ImplGlfw
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import me.shedaniel.architectury.utils.GameInstance
+import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.BlockPos
+import net.minecraft.network.chat.ClickEvent
+import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
 import observable.Observable
 import observable.net.C2SPacket
-import observable.server.TraceMap
 import uno.glfw.GlfwWindow
+import java.io.File
 import java.lang.Exception
 import java.lang.Float.max
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -211,6 +221,24 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         }
     }
 
+    fun exportToFile() {
+        val dir = File("observable_profiles")
+        val sdf = SimpleDateFormat("yyyy-MM-dd--HH.mm.ss")
+        if (!dir.exists()) dir.mkdirs()
+        val file = File(dir, "${sdf.format(Date())}.json")
+        file.printWriter().use {
+            it.println(Json {
+                prettyPrint = true
+            }.encodeToString(Observable.RESULTS))
+        }
+
+        val link = TextComponent(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
+            it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_FILE, dir.absolutePath))
+        }
+
+        GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.profile_saved", link))
+    }
+
     inline fun doRender(i: Int, j: Int, f: Float) {
         implGL.newFrame()
         implGlfw.newFrame()
@@ -225,9 +253,13 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(startingPos, Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Individual Results ($ticks ticks processed)", null) {
-//                    ImGui.columns(2, "searchCol")
                     ImGui.setWindowFontScale(fontScale)
+                    ImGui.columns(2, "searchCol")
                     if (ImGui.inputText("Filter", filterBuf)) { applyMapFilter() }
+                    ImGui.nextColumn()
+                    button("Export to file") { exportToFile() }
+                    ImGui.nextColumn()
+                    ImGui.columns(1)
                     filterMap.forEach { (dim, vals) ->
                         collapsingHeader(
                             "$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
