@@ -3,11 +3,8 @@ package observable.client
 import ChunkMap
 import com.mojang.blaze3d.vertex.PoseStack
 import glm_.vec2.Vec2
-import imgui.Cond
-import imgui.ImGui
-import imgui.cStr
+import imgui.*
 import imgui.classes.Context
-import imgui.dsl
 import imgui.impl.gl.ImplBestGL
 import imgui.impl.glfw.ImplGlfw
 import net.minecraft.client.Minecraft
@@ -20,6 +17,7 @@ import observable.net.C2SPacket
 import observable.server.TraceMap
 import uno.glfw.GlfwWindow
 import java.lang.Exception
+import java.lang.Float.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -72,6 +70,13 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     var dimTimingsMap = HashMap<ResourceLocation, Double>()
     lateinit var typeTimingsMap: List<TypeTimingsEntry>
     lateinit var chunkMap: ChunkMap
+
+    var fontScale: Float = Minecraft.getInstance().window.let {
+        if (it.isFullscreen) it.width.toFloat() / 1920.0f
+        else 1.0f
+    }
+        set(v) { if (v > 0.01f) field = max(v, 0.5f) }
+
     var exception: Exception? = null
     var exceptionOpen: Boolean
         get() = exception != null
@@ -221,6 +226,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Individual Results ($ticks ticks processed)", null) {
 //                    ImGui.columns(2, "searchCol")
+                    ImGui.setWindowFontScale(fontScale)
                     if (ImGui.inputText("Filter", filterBuf)) { applyMapFilter() }
                     filterMap.forEach { (dim, vals) ->
                         collapsingHeader(
@@ -276,6 +282,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Chunks", null) {
+                    ImGui.setWindowFontScale(fontScale)
                     chunkMap.forEach { (dim, chunks) ->
                         collapsingHeader(
                             "$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
@@ -311,6 +318,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Aggregated Results", null) {
+                    ImGui.setWindowFontScale(fontScale)
                     ImGui.columns(2, "aggResCol", false)
                     ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
                     typeTimingsMap.forEach { (type, rate, ticks) ->
@@ -325,11 +333,14 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Settings", null) {
+                    ImGui.setWindowFontScale(fontScale)
                     with(ClientSettings) {
                         try {
                             ImGui.inputInt("Minimum rate (ns/t)", ::minRate)
                             ImGui.inputInt("Maximum block text distance (m)", ::maxBlockDist)
                             ImGui.inputInt("Maximum entity text distance (m)", ::maxEntityDist)
+                            ImGui.dragFloat("Font scale", ::fontScale, vSpeed = 0.05f, vMin = 0.5f,
+                                flags = SliderFlag.NoInput.i)
                             ImGui.checkbox("Normalize results", ::normalized)
                         } catch (e: Exception) {
                             ImGui.text("Error updating settings:\n\t${e.javaClass.name}\n\t\t${e.message}")
