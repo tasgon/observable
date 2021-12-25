@@ -18,6 +18,7 @@ import observable.Props
 import observable.net.S2CPacket
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlin.random.Random
 
 inline val StackTraceElement.classMethod get() = "${this.className} + ${this.methodName}"
 
@@ -25,6 +26,7 @@ class Profiler {
     data class TimingData(var time: Long, var ticks: Int, var traces: TraceMap, var name: String = "")
 
     var timingsMap = HashMap<Entity, TimingData>()
+    lateinit var serverTraceMap: TraceMap
     lateinit var serverThread: Thread
     lateinit var samplerThread: Thread
 
@@ -42,17 +44,17 @@ class Profiler {
     var startingTicks: Int = 0
 
     fun process(entity: Entity) = timingsMap.getOrPut(entity) {
-        TimingData(0, 0, TraceMap(entity::class, Props.entityDepth))
+        TimingData(0, 0, TraceMap(entity::class))
     }
 
     fun processBlockEntity(blockEntity: BlockEntity) = if (blockEntity.level == null) {
         Observable.LOGGER.warn("Block entity at ${blockEntity.blockPos} has no associated dimension")
-        TimingData(0, 0, TraceMap(blockEntity::class, Props.blockEntityDepth),
+        TimingData(0, 0, TraceMap(blockEntity::class),
             blockEntity.blockState.block.descriptionId)
     } else {
         blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
             .getOrPut(blockEntity.blockPos) {
-                TimingData(0, 0, TraceMap(blockEntity::class, Props.blockEntityDepth),
+                TimingData(0, 0, TraceMap(blockEntity::class),
                     blockEntity.blockState.block.descriptionId)
             }
     }
@@ -60,13 +62,13 @@ class Profiler {
     fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
         blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
             .getOrPut(pos) {
-                TimingData(0, 0, TraceMap(blockState::class, Props.blockDepth),
+                TimingData(0, 0, TraceMap(blockState::class),
                     blockState.block.descriptionId)
             }
 
     fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
         blockTimingsMap.getOrPut(level.dimension()) { HashMap() }.getOrPut(pos) {
-            TimingData(0, 0, TraceMap(fluidState::class, Props.fluidDepth),
+            TimingData(0, 0, TraceMap(fluidState::class),
                 Registry.FLUID.getKey(fluidState.type).toString())
         }
 
@@ -74,6 +76,7 @@ class Profiler {
         player = ctx.player as? ServerPlayer
         timingsMap.clear()
         blockTimingsMap.clear()
+        serverTraceMap = TraceMap()
         val start = System.currentTimeMillis()
         synchronized(Props.notProcessing) {
             notProcessing = false
@@ -82,17 +85,25 @@ class Profiler {
         if (sample) {
             samplerThread = Thread(TaggedSampler(serverThread))
             samplerThread.start()
+
+            Thread {
+                while (!Props.notProcessing) {
+                    val interval = ServerSettings.traceInterval.toLong()
+                    val deviation = ServerSettings.deviation.toLong()
+                    serverTraceMap.add(serverThread.stackTrace.reversed().iterator())
+                    Thread.sleep(interval + Random.nextLong(-deviation, deviation))
+                }
+            }.start()
         }
-        duration?.let {
-            val durMs = duration.toLong() * 1000L
-            Observable.CHANNEL.sendToPlayers(
-                GameInstance.getServer()!!.playerList.players,
-                S2CPacket.ProfilingStarted(start + durMs)
-            )
-            Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
-            Timer("Profiler", false).schedule(durMs) {
-                stopRunning()
-            }
+
+        val durMs = (duration?.toLong() ?: return) * 1000L
+        Observable.CHANNEL.sendToPlayers(
+            GameInstance.getServer()!!.playerList.players,
+            S2CPacket.ProfilingStarted(start + durMs)
+        )
+        Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
+        Timer("Profiler", false).schedule(durMs) {
+            stopRunning()
         }
     }
 
@@ -104,7 +115,7 @@ class Profiler {
         }
         val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
-        val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks)
+        val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, serverTraceMap)
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))

@@ -16,17 +16,18 @@ import observable.net.BlockPosSerializer
 import observable.net.EntitySerializer
 import observable.net.ResourceLocationSerializer
 import observable.server.Profiler
+import observable.server.Remapper
 import observable.server.TraceMap
 import kotlin.math.roundToInt
 
 @Serializable
 data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
                          val blocks: Map<ResourceLocation, List<Entry<BlockPos>>>,
-                         val chunks: ChunkMap, val ticks: Int) {
+                         val chunks: ChunkMap, val traces: SerializedTraceMap?, val ticks: Int) {
     companion object {
         fun create(entities: Map<Entity, Profiler.TimingData>,
                    blocks: Map<ResourceKey<Level>, Map<BlockPos, Profiler.TimingData>>,
-                   ticks: Int): ProfilingData {
+                   ticks: Int, traceMap: TraceMap? = null): ProfilingData {
             val chunks = ChunkMapBuilder()
 
             val entityEntries = entities.map { (entity, data) ->
@@ -43,7 +44,8 @@ data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
                 }
             }.toMap()
 
-            return ProfilingData(entityEntries, blockEntries, chunks.build(ticks), ticks)
+            return ProfilingData(entityEntries, blockEntries, chunks.build(ticks),
+                traceMap?.let { SerializedTraceMap.create(it) }, ticks)
         }
     }
 
@@ -84,7 +86,7 @@ data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
     data class Entry<T>(val obj: T, val type: String, val rate: Double,
                         val ticks: Int, val traces: SerializedTraceMap) {
         constructor(obj: T, type: String, data: Profiler.TimingData) : this(obj, type,
-            data.time.toDouble() / data.ticks.toDouble(), data.ticks, SerializedTraceMap(data.traces))
+            data.time.toDouble() / data.ticks.toDouble(), data.ticks, SerializedTraceMap.create(data.traces))
     }
 
     @Serializable
@@ -94,12 +96,21 @@ data class ProfilingData(val entities: Map<ResourceLocation, List<Entry<Int>>>,
     }
 
     @Serializable
-    data class SerializedTraceMap(val classname: String, val methodName: String,
+    data class SerializedTraceMap(val className: String, val methodName: String,
                                   val children: List<SerializedTraceMap>, val count: Int) {
-        constructor(traceMap: TraceMap) : this(traceMap.className, traceMap.classMethod,
-            traceMap.children.map { (_, map) ->
-                SerializedTraceMap(map)
-            }.sortedByDescending { it.count }, traceMap.count)
+        companion object {
+            fun create(traceMap: TraceMap): SerializedTraceMap {
+                Remapper.transform(traceMap)
+
+                return SerializedTraceMap(traceMap.className, traceMap.methodName,
+                    traceMap.children.map { (_, map) ->
+                        Remapper.transform(map)
+                        SerializedTraceMap.create(map)
+                    }.sortedByDescending { it.count }, traceMap.count)
+            }
+        }
+
+        val classMethod get() = "$className.$methodName"
     }
 }
 

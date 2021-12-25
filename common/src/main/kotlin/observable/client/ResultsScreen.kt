@@ -210,7 +210,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
 
     fun renderTrace(traceMap: ProfilingData.SerializedTraceMap, max: Int) {
         for (child in traceMap.children) {
-            val open = ImGui.treeNode(child.methodName)
+            val open = ImGui.treeNode(child.classMethod)
             ImGui.nextColumn()
             ImGui.text("%.2f%%", child.count.toFloat() / max * 100F)
             ImGui.nextColumn()
@@ -350,16 +350,26 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Aggregated Results", null) {
-                    ImGui.setWindowFontScale(fontScale)
-                    ImGui.columns(2, "aggResCol", false)
-                    ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
-                    typeTimingsMap.forEach { (type, rate, ticks) ->
-                        ImGui.text(type)
-                        ImGui.nextColumn()
-                        ImGui.text("${(rate / 1000).roundToInt()} us/t ($ticks ticks)")
-                        ImGui.nextColumn()
+                    tabBar("aggTabs") {
+                        tabItem("(Block)Entity listing") {
+                            ImGui.setWindowFontScale(fontScale)
+                            ImGui.columns(2, "aggResCol", false)
+                            ImGui.setColumnWidth(0, ImGui.windowWidth * .65F)
+                            typeTimingsMap.forEach { (type, rate, ticks) ->
+                                ImGui.text(type)
+                                ImGui.nextColumn()
+                                ImGui.text("${(rate / 1000).roundToInt()} us/t ($ticks ticks)")
+                                ImGui.nextColumn()
+                            }
+                            ImGui.columns(1)
+                        }
+                        tabItem("Stacktraces") {
+                            Observable.RESULTS?.traces?.let {
+                                ImGui.columns(2)
+                                renderTrace(it, it.count)
+                            }
+                        }
                     }
-                    ImGui.columns(1)
                 }
 
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))

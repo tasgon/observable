@@ -1,37 +1,44 @@
 package observable.server
 
+import net.minecraft.server.level.ServerLevel
 import kotlin.reflect.KClass
 
-class TraceMap(var className: String, var classMethod: String = "null",
-               val children: MutableMap<MapKey, TraceMap> = mutableMapOf(), var count: Int = 0,
-               var initialDepth: Int = 0, var jClass: Class<*>? = null) {
-    constructor(target: KClass<*>, initialDepth: Int) :
-            this(target.java.name,initialDepth = initialDepth, jClass = target.java)
+val SERVER_LEVEL_CLASS = ServerLevel::class.java.name
+
+class TraceMap(
+    var className: String = "null", var methodName: String = "null",
+    val children: MutableMap<MapKey, TraceMap> = mutableMapOf(), var count: Int = 0
+) {
+    constructor(target: KClass<*>) :
+            this(target.java.name)
 
     data class MapKey(val className: String, val classMethod: String)
 
     fun add(stackTrace: List<StackTraceElement>) {
         val traces = stackTrace
             .asReversed()
-            .drop(initialDepth)
-            .asSequence()
-        if (jClass == null || traces.firstOrNull()?.let { !Class.forName(it.className).isAssignableFrom(jClass) } == true) {
-//            println("${traces.firstOrNull()?.className} not assignable from ${jClass?.name}")
-            return
+            .iterator()
+        while (traces.hasNext()) {
+            val name = traces.next().className
+            if (SERVER_LEVEL_CLASS == name) {
+                add(traces)
+                return
+            }
         }
-        add(traces.iterator())
     }
 
     inline fun add(traces: Iterator<StackTraceElement>) {
         if (!traces.hasNext()) return
         count += 1
-        classMethod = traces.next().classMethod
+        val tr = traces.next()
+        className = tr.className
+        methodName = tr.methodName
         var target = this
         while (traces.hasNext()) {
             val el = traces.next()
-            classMethod = el.classMethod
-            val key = MapKey(el.className, el.classMethod)
-            val traceMap = target.children.getOrPut(key) { TraceMap(el.className, el.classMethod) }
+            methodName = el.methodName
+            val key = MapKey(el.className, el.methodName)
+            val traceMap = target.children.getOrPut(key) { TraceMap(el.className, el.methodName) }
             traceMap.count += 1
             target = traceMap
         }
