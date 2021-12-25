@@ -12,7 +12,6 @@ Fabric 1.17:
 
 - To run the mod in a development environment, you currently need to set the `DEV_ENV` environment variable, [like so](https://user-images.githubusercontent.com/10052313/140556395-adc23683-5a77-452c-949c-ef08d320280b.png). This will be improved in the future, as it is also a problem for Forge 1.17 and I'd like to handle it in a more batter manner.
 
-ROADMAP:
+## Credits
 
-1. Allow exporting of profiling data.
-2. Currently, blocks and entities are profiled by simply timing how long it takes for the blocks to tick. I'm exploring methods of sampling stack traces for individual entities, so users and devs can get an idea of what exactly the block is doing to take up tick time.
+- Lucko's [spark-mappings](https://github.com/lucko/spark-mappings) for the deobfuscation mappings I use in the sampler
