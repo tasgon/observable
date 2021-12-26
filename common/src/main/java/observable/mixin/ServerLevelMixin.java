@@ -16,7 +16,7 @@ import java.util.Random;
 
 @Mixin(ServerLevel.class)
 public class ServerLevelMixin {
-    @Redirect(method = "tickLiquid", at = @At(value = "INVOKE",
+    @Redirect(method = "tickFluid", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"))
     public final void onTickLiquid(FluidState state, Level level, BlockPos pos) {
         if (Props.notProcessing) state.tick(level, pos);

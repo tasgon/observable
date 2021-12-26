@@ -17,21 +17,21 @@ See what's lagging your world.
 [[dependencies.observable]]
 modId = "forge"
 mandatory = true
-versionRange = "[35,)"
+versionRange = "[39,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.observable]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.16.2,)"
+versionRange = "[1.18.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.observable]]
 modId = "architectury"
 mandatory = true
-versionRange = "[1.1.55,)"
+versionRange = "[3.1.45,)"
 ordering = "AFTER"
 side = "BOTH"
 

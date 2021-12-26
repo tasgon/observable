@@ -9,7 +9,7 @@ import imgui.impl.gl.ImplBestGL
 import imgui.impl.glfw.ImplGlfw
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.shedaniel.architectury.utils.GameInstance
+import dev.architectury.utils.GameInstance
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen

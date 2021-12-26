@@ -3,11 +3,13 @@ package observable.client
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
+import com.mojang.math.Matrix4f
 import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.multiplayer.ClientLevel
+import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
@@ -29,7 +31,7 @@ object Overlay {
             (rateMicros / 100.0 * 255).roundToInt().coerceIn(0, 255),
             ((100.0 - rateMicros) / 100.0 * 255).roundToInt().coerceIn(0, 255),
             0,
-            (rateMicros / 100.0 * 255 + 25).roundToInt().coerceIn(0, 255)
+            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100)
         )
 
         val hex: Int = with(this) {
@@ -57,22 +59,53 @@ object Overlay {
     val DIST_FAC = 1.0 / (2*16.pow(2)).pow(.5F)
 
     val font: Font by lazy { Minecraft.getInstance().font }
+
+    class OverlayRenderType(name: String, fmt: VertexFormat, mode: VertexFormat.Mode) :
+        RenderType(name, fmt,
+            VertexFormat.Mode.QUADS, 256, false, true, {}, {}) {
+        companion object {
+            fun build(): RenderType {
+                val boolType = java.lang.Boolean.TYPE
+
+                // So here's the thing: for some reason, Minecraft decided to not allow any kind of external access to
+                // create a custom RenderType outside of the class. However, we need to make our own to have the block
+                // outlines visible through walls. We can't mixin an invoker either as the CompositeRenderType is private
+                // within RenderType. We can get around that using reflection, hence this monstrosity.
+                val parameterTypes = arrayOf(String::class.java, VertexFormat::class.java,
+                    VertexFormat.Mode::class.java, Integer.TYPE, boolType, boolType,
+                    RenderType.CompositeState::class.java)
+                val fn = RenderType::class.java.declaredMethods.filter { method ->
+                    method.parameterTypes.contentEquals(parameterTypes)
+                }.first()
+                fn.isAccessible = true
+
+                return fn.invoke(null, "heat", DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS, 256, false, false, buildCompositeState()) as RenderType
+            }
+
+            private fun buildCompositeState(): CompositeState {
+                return RenderType.CompositeState.builder()
+                    .setShaderState(ShaderStateShard { GameRenderer.getPositionColorShader() })
+//                    .setTextureState(EmptyTextureStateShard({}, {}))
+                    .setDepthTestState(DepthTestStateShard("always", 519))
+                    .setTransparencyState(
+                        RenderStateShard.TransparencyStateShard("src_to_one",
+                            {
+                                RenderSystem.enableBlend()
+                                RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
+                                    GlStateManager.DestFactor.ONE)
+                            }
+                        ) {
+                            RenderSystem.disableBlend()
+                            RenderSystem.defaultBlendFunc()
+                        }).createCompositeState(true)
+            }
+        }
+    }
+
     @Suppress("INACCESSIBLE_TYPE")
     private val renderType: RenderType by lazy {
-        RenderType.create("heat", DefaultVertexFormat.POSITION_COLOR, 7, 256,
-            RenderType.CompositeState.builder()
-                .setTextureState(RenderStateShard.TextureStateShard())
-                .setDepthTestState(RenderStateShard.DepthTestStateShard("always", 519))
-                .setTransparencyState(
-                    RenderStateShard.TransparencyStateShard("src_to_one",
-                        {
-                            RenderSystem.enableBlend()
-                            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE)
-                        }
-                    ) {
-                        RenderSystem.disableBlend()
-                        RenderSystem.defaultBlendFunc()
-                    }).createCompositeState(true))
+        OverlayRenderType.build()
     }
 
     fun load(lvl: ClientLevel? = null) {
@@ -98,7 +131,7 @@ object Overlay {
         this.load(lvl)
     }
 
-    fun render(poseStack: PoseStack, partialTicks: Float) {
+    fun render(poseStack: PoseStack, partialTicks: Float, projection: Matrix4f) {
         if (!enabled || Observable.RESULTS == null) return
 
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
@@ -136,14 +169,12 @@ object Overlay {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
-            renderType.setupRenderState()
-            vertexBuf?.bind()
-            DefaultVertexFormat.POSITION_COLOR.setupBufferState(0)
-            vertexBuf?.draw(poseStack.last().pose(), renderType.mode())
-            VertexBuffer.unbind()
-            RenderSystem.clearCurrentColor()
-            DefaultVertexFormat.POSITION_COLOR.clearBufferState()
-            renderType.clearRenderState()
+            vertexBuf?.let {
+                RenderSystem.setShader { GameRenderer.getPositionColorShader() }
+                RenderSystem.disableTexture()
+                it.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getPositionColorShader()!!)
+                RenderSystem.enableTexture()
+            }
         }
 
         poseStack.popPose()
@@ -166,7 +197,7 @@ object Overlay {
         }
 
         buf.end()
-        val vbuf = VertexBuffer(DefaultVertexFormat.POSITION_COLOR)
+        val vbuf = VertexBuffer()
         vbuf.upload(buf)
         vertexBuf = vbuf
         dataAvailable = false
@@ -176,7 +207,7 @@ object Overlay {
                           partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
         val rate = entry.rate
         val entity = entry.entity ?: return
-        if (entity.removed || (entity == Minecraft.getInstance().player
+        if (entity.isRemoved || (entity == Minecraft.getInstance().player
             && entity.deltaMovement.lengthSqr() > .01)) return
 
         poseStack.pushPose()

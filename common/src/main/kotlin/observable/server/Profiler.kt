@@ -1,8 +1,8 @@
 package observable.server
 
 import ProfilingData
-import me.shedaniel.architectury.networking.NetworkManager
-import me.shedaniel.architectury.utils.GameInstance
+import dev.architectury.networking.NetworkManager
+import dev.architectury.utils.GameInstance
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.network.chat.TextComponent
@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.entity.TickingBlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
 import observable.Observable
@@ -47,16 +48,11 @@ class Profiler {
         TimingData(0, 0, TraceMap(entity::class))
     }
 
-    fun processBlockEntity(blockEntity: BlockEntity) = if (blockEntity.level == null) {
-        Observable.LOGGER.warn("Block entity at ${blockEntity.blockPos} has no associated dimension")
+    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) = blockTimingsMap.getOrPut(level.dimension()) {
+        HashMap()
+    }.getOrPut(blockEntity.pos) {
         TimingData(0, 0, TraceMap(blockEntity::class),
-            blockEntity.blockState.block.descriptionId)
-    } else {
-        blockTimingsMap.getOrPut(blockEntity.level!!.dimension()) { HashMap() }
-            .getOrPut(blockEntity.blockPos) {
-                TimingData(0, 0, TraceMap(blockEntity::class),
-                    blockEntity.blockState.block.descriptionId)
-            }
+            blockEntity.type)
     }
 
     fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =

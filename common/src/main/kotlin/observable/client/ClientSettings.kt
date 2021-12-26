@@ -15,7 +15,7 @@ object ClientSettings {
     var maxEntityDist: Int = 2048
         @Synchronized set
 
-    var normalized = false
+    var normalized = true
         set(v) {
             field = v
             (Minecraft.getInstance().screen as? ResultsScreen)?.loadData()
