@@ -5,13 +5,13 @@ import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.shedaniel.architectury.event.events.CommandRegistrationEvent
-import me.shedaniel.architectury.event.events.LifecycleEvent
-import me.shedaniel.architectury.event.events.client.ClientLifecycleEvent
-import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
-import me.shedaniel.architectury.event.events.client.ClientTickEvent
-import me.shedaniel.architectury.registry.KeyBindings
-import me.shedaniel.architectury.utils.GameInstance
+import dev.architectury.event.events.common.CommandRegistrationEvent
+import dev.architectury.event.events.client.ClientLifecycleEvent
+import dev.architectury.event.events.client.ClientPlayerEvent
+import dev.architectury.event.events.client.ClientTickEvent
+import dev.architectury.event.events.common.LifecycleEvent
+import dev.architectury.registry.client.keymappings.KeyMappingRegistry
+import dev.architectury.utils.GameInstance
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
 import net.minecraft.commands.CommandSourceStack
@@ -200,7 +200,7 @@ object Observable {
 
     @JvmStatic
     fun clientInit() {
-        KeyBindings.registerKeyBinding(PROFILE_KEYBIND)
+        KeyMappingRegistry.register(PROFILE_KEYBIND)
 
         ClientTickEvent.CLIENT_POST.register {
             if (PROFILE_KEYBIND.consumeClick()) {
@@ -208,7 +208,7 @@ object Observable {
             }
         }
 
-        ClientLifecycleEvent.CLIENT_WORLD_LOAD.register {
+        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register {
             Overlay.loadSync(it)
         }
 

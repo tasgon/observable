@@ -1,7 +1,7 @@
 package observable
 
-import me.shedaniel.architectury.event.events.TickEvent
-import me.shedaniel.architectury.utils.GameInstance
+import dev.architectury.event.events.common.TickEvent
+import dev.architectury.utils.GameInstance
 import observable.net.S2CPacket
 import observable.server.ServerSettings
 

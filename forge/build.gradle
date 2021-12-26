@@ -1,10 +1,6 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "5.0.0"
+    id "com.github.johnrengelman.shadow" version "7.1.1"
     id 'org.jetbrains.kotlin.jvm'
-}
-
-configurations {
-    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
 }
 
 architectury {
@@ -12,10 +8,20 @@ architectury {
     forge()
 }
 
-loom {
-    useFabricMixin = true
+configurations {
+    common
+    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentForge.extendsFrom common
+}
 
-    mixinConfig "observable.common.json"
+loom {
+    forge {
+//        useFabricMixin = true
+
+        mixinConfig "observable.common.json"
+    }
 }
 
 minecraft {
@@ -29,14 +35,15 @@ minecraft {
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
     // Remove the next line if you don't want to depend on the API
-    modApi "me.shedaniel:architectury-forge:${rootProject.architectury_version}"
+    modApi "dev.architectury:architectury-forge:${rootProject.architectury_version}"
 
-    implementation(project(path: ":common")) {
-        transitive = false
-    }
-    developmentForge(project(path: ":common")) {
-        transitive = false
-    }
+//    implementation(project(path: ":common")) {
+//        transitive = false
+//    }
+//    developmentForge(project(path: ":common")) {
+//        transitive = false
+//    }
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) {
         transitive = false
     }
@@ -45,7 +52,7 @@ dependencies {
     }
 
     ["core", "gl", "glfw"].forEach {
-        shadowCommon("com.github.kotlin-graphics.imgui:$it:jdk8-SNAPSHOT") {
+        shadowCommon("com.github.kotlin-graphics.imgui:$it:${rootProject.imgui_version}") {
             exclude group: "org.lwjgl"
             exclude group: "org.jetbrains.kotlin"
             exclude group: "org.intellij"

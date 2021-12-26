@@ -8,7 +8,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.TickableBlockEntity;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import observable.Observable;
 import observable.Props;
 import observable.server.Profiler;
@@ -53,13 +53,13 @@ public class LevelMixin {
     }
 
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/entity/TickableBlockEntity;tick()V"))
-    public final void redirectTick(TickableBlockEntity blockEntity) {
+            target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
+    public void redirectTick(TickingBlockEntity blockEntity) {
         if (Props.notProcessing) blockEntity.tick();
         else {
             if (Props.blockEntityDepth < 0) Props.blockEntityDepth = Thread.currentThread().getStackTrace().length - 1;
             if ((Object)this instanceof ServerLevel) {
-                Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processBlockEntity((BlockEntity) blockEntity);
+                Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processBlockEntity(blockEntity, (Level)(Object)this);
                 Props.currentTarget.set(data);
                 long start = System.nanoTime();
                 blockEntity.tick();
