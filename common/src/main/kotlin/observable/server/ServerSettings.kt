@@ -11,5 +11,6 @@ val TypeMap = mapOf(Integer.TYPE to { integer() }, java.lang.Boolean.TYPE to { b
 @Serializable
 data class ServerSettingsData(
     var traceInterval: Int = 3,
-    var deviation: Int = 1
+    var deviation: Int = 1,
+    var notifyInterval: Int = 120 * 60 * 1000
 )

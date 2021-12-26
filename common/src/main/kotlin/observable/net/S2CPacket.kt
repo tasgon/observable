@@ -22,4 +22,7 @@ class S2CPacket {
         Available,
         NoPermissions
     }
+
+    @Serializable
+    class ConsiderProfiling(val tps: Double)
 }

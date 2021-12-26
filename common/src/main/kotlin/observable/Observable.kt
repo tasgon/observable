@@ -12,10 +12,12 @@ import me.shedaniel.architectury.event.events.client.ClientPlayerEvent
 import me.shedaniel.architectury.event.events.client.ClientTickEvent
 import me.shedaniel.architectury.registry.KeyBindings
 import me.shedaniel.architectury.utils.GameInstance
+import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.commands.Commands.literal
+import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceLocation
@@ -27,11 +29,13 @@ import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
+import observable.server.ContinuousPerfEval
 import observable.server.Profiler
 import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
+import kotlin.system.exitProcess
 
 object Observable {
     const val MOD_ID = "observable"
@@ -142,9 +146,25 @@ object Observable {
             }
         }
 
+        CHANNEL.register { t: S2CPacket.ConsiderProfiling, supplier ->
+            Observable.LOGGER.info("Notifying player")
+            val tps = "%.2f".format(t.tps)
+            GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.suggest", tps,
+                TranslatableComponent("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
+                    .withStyle {
+                        it.withClickEvent(object : ClickEvent(null, "") {
+                            override fun getAction(): Action? {
+                                GameInstance.getClient().setScreen(PROFILE_SCREEN)
+                                return null
+                            }
+                        })
+                    }))
+        }
+
         LifecycleEvent.SERVER_STARTED.register {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
+            ContinuousPerfEval.start()
             LOGGER.info("Registered thread ${thread.name}")
         }
 
