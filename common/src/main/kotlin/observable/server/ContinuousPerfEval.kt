@@ -16,7 +16,10 @@ object ContinuousPerfEval {
         if (started) return
         TickEvent.SERVER_POST.register {
             idx += 1u
-            if (idx < 200u) return@register
+            if (idx < 300u) {
+                lastTime = System.nanoTime()
+                return@register
+            }
             val time = System.nanoTime()
             timings[idx.toInt() % timings.size] = time - lastTime
             lastTime = time
