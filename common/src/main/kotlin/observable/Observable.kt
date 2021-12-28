@@ -1,6 +1,6 @@
 package observable
 
-import ProfilingData
+import observable.server.ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import kotlinx.serialization.encodeToString

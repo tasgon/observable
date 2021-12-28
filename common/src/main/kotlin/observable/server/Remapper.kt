@@ -11,7 +11,7 @@ enum class ModLoader {
     FABRIC, FORGE
 }
 
-val BASE_URL = "https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_16_5"
+val BASE_URL = "https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_18"
 val MAPPING_URLS = mapOf(ModLoader.FABRIC to "$BASE_URL/yarn.json",
                          ModLoader.FORGE to "$BASE_URL/mcp.json")
 

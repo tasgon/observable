@@ -1,6 +1,6 @@
 package observable.server
 
-import ProfilingData
+import observable.server.ProfilingData
 import dev.architectury.networking.NetworkManager
 import dev.architectury.utils.GameInstance
 import net.minecraft.core.BlockPos

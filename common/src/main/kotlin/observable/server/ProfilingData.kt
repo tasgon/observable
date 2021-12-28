@@ -1,5 +1,6 @@
 @file:UseSerializers(EntitySerializer::class, ResourceLocationSerializer::class,
         BlockEntitySerializer::class, BlockPosSerializer::class)
+package observable.server
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers

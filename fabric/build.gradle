@@ -43,12 +43,12 @@ dependencies {
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) {
         transitive = false
     }
-    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.2.2") {
+    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:1.3.1") {
         transitive = false
     }
 
     ["core", "gl", "glfw"].forEach {
-        shadowCommon("com.github.kotlin-graphics.imgui:$it:${rootProject.imgui_version}") {
+        shadowCommon("com.github.tasgon.imgui:$it:${rootProject.imgui_version}") {
             exclude group: "org.lwjgl"
             exclude group: "org.jetbrains.kotlin"
             exclude group: "org.intellij"
