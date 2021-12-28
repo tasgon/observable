@@ -36,7 +36,7 @@ public class ObservableForge {
     }
 
     // Until McModLauncher/modlauncher#78 gets dealt with, we have to
-    // monkey patch our own classloader to make things work
+    // monkey patch our own classloader to make things work in dev
     public static class HackyLoader extends ClassLoader {
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
