@@ -1,6 +1,6 @@
 package observable.net
 
-import ProfilingData
+import observable.server.ProfilingData
 import kotlinx.serialization.Serializable
 import java.util.*
 

@@ -1,6 +1,7 @@
 package observable.client
 
-import ChunkMap
+import observable.server.ChunkMap
+import observable.server.ProfilingData
 import com.mojang.blaze3d.vertex.PoseStack
 import glm_.vec2.Vec2
 import imgui.*
