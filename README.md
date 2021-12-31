@@ -8,9 +8,9 @@ See [CurseForge](https://www.curseforge.com/minecraft/mc-mods/observable) for do
 
 # Development notes
 
-Fabric 1.17:
+Forge 1.18:
 
-- To run the mod in a development environment, you currently need to set the `DEV_ENV` environment variable, [like so](https://user-images.githubusercontent.com/10052313/140556395-adc23683-5a77-452c-949c-ef08d320280b.png). This will be improved in the future, as it is also a problem for Forge 1.17 and I'd like to handle it in a more batter manner.
+- Set the environment variable `O_PATCH_LOADER=true` in order for the mod to run correctly in a development environment
 
 ## Credits
 
