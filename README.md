@@ -8,9 +8,13 @@ See [CurseForge](https://www.curseforge.com/minecraft/mc-mods/observable) for do
 
 # Development notes
 
+Forge 1.18:
+
+- Forge's class loader changes more-or-less require all dependencies to be modules, and some of my dependencies (particularly `kotlin-imgui`) only have non-module builds. While I have patched in my own classloader (which you can enable by setting the environment variable `O_PATCH_LOADER=true`) to have at least partial functionality in a development environment, some things will still have classloader conflicts. In my opinion, you're better off building it into a jar (which will shade all dependencies into the same module) and running it outside the IDE.
+
 Fabric 1.17:
 
-- To run the mod in a development environment, you currently need to set the `DEV_ENV` environment variable, [like so](https://user-images.githubusercontent.com/10052313/140556395-adc23683-5a77-452c-949c-ef08d320280b.png). This will be improved in the future, as it is also a problem for Forge 1.17 and I'd like to handle it in a more batter manner.
+- To run the mod in a development environment, you currently need to set the environment variable `DEV_ENV=1`.
 
 ## Credits
 
