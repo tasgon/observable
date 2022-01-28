@@ -312,7 +312,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                     }
                 }
 
-                ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100))
+                ImGui.setNextWindowPos(Vec2(startingPos.x, startingPos.y + indivSize.y + 100), Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Chunks", null) {
                     ImGui.setWindowFontScale(fontScale)
@@ -348,7 +348,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                     }
                 }
 
-                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y))
+                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y), Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Aggregated Results", null) {
                     tabBar("aggTabs") {
@@ -373,7 +373,7 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                     }
                 }
 
-                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100))
+                ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y + indivSize.y + 100), Cond.Once)
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Settings", null) {
                     ImGui.setWindowFontScale(fontScale)
