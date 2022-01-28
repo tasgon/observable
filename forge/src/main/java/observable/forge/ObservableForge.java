@@ -44,10 +44,10 @@ public class ObservableForge {
             try {
                 try {
                     return ClassLoader.getPlatformClassLoader().loadClass(name);
-                } catch (ClassNotFoundException e) {
+                } catch (Throwable e) {
                     return com.google.gson.Gson.class.getClassLoader().loadClass(name);
                 }
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable e) {
                 return ClassLoader.getSystemClassLoader().loadClass(name);
             }
         }

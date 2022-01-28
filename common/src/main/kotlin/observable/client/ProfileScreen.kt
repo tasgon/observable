@@ -11,9 +11,24 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
 import observable.net.C2SPacket
+import java.io.File
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
+    companion object {
+        private val STATUS_FILE get() = File("o_prof")
+        var HAS_BEEN_OPENED = STATUS_FILE.exists()
+            private set(value) {
+                if (value && !field) try {
+                    STATUS_FILE.createNewFile()
+                } catch (e: Exception) {
+                    Observable.LOGGER.warn("Could not create status file: ${e.message}")
+                    e.printStackTrace()
+                }
+                field = value
+            }
+    }
+
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
@@ -56,6 +71,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
     override fun init() {
         super.init()
+
+        ProfileScreen.HAS_BEEN_OPENED = true
 
         val startBtn = addRenderableWidget(Button(
             0, height / 2 - 48, 100, 20, TranslatableComponent("text.observable.profile_tps")

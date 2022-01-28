@@ -147,6 +147,7 @@ object Observable {
         }
 
         CHANNEL.register { t: S2CPacket.ConsiderProfiling, supplier ->
+            if (ProfileScreen.HAS_BEEN_OPENED) return@register
             Observable.LOGGER.info("Notifying player")
             val tps = "%.2f".format(t.tps)
             GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.suggest", tps,
@@ -164,7 +165,7 @@ object Observable {
         LifecycleEvent.SERVER_STARTED.register {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
-            ContinuousPerfEval.start()
+//            ContinuousPerfEval.start()
             LOGGER.info("Registered thread ${thread.name}")
         }
 
