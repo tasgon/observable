@@ -27,7 +27,7 @@ public class LevelMixin {
      * @author .
      */
     @Overwrite
-    public void guardEntityTick(Consumer<Entity> consumer, Entity entity) {
+    public <T extends Entity> void guardEntityTick(Consumer<T> consumer, T entity) {
         try {
             if (Props.notProcessing) consumer.accept(entity);
             else {

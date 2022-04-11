@@ -24,14 +24,6 @@ loom {
     }
 }
 
-minecraft {
-    runs {
-        client {
-            vmArg "-Dmixin.debug=true"
-        }
-    }
-}
-
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
     // Remove the next line if you don't want to depend on the API

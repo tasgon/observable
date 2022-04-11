@@ -16,7 +16,7 @@ configurations {
     developmentFabric.extendsFrom common
 }
 
-minecraft {
+loom {
     runs {
         client {
             vmArg "-Xmx2G"
