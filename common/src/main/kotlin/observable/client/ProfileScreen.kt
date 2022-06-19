@@ -11,8 +11,7 @@ import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.network.chat.TextComponent
-import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.network.chat.Component
 import observable.Observable
 import observable.net.C2SPacket
 import observable.server.DataWithDiagnostics
@@ -21,7 +20,7 @@ import java.net.URL
 import java.util.zip.GZIPInputStream
 import kotlin.math.roundToInt
 
-class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
+class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
     companion object {
         private val STATUS_FILE get() = File("o_prof")
         var HAS_BEEN_OPENED = STATUS_FILE.exists()
@@ -56,7 +55,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 "Running for another %.1f seconds"
                     .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0))
             is TPSProfilerCompleted -> "Profiling finished, please wait..."
-            is ObservableStatus -> TranslatableComponent(text).string
+            is ObservableStatus -> Component.translatable(text).string
             is Custom -> text
         }
     }
@@ -69,8 +68,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     lateinit var getBtn: Button
     lateinit var overlayBtn: BetterCheckbox
 
-    val fpsText = TranslatableComponent("text.observable.profile_fps")
-    val unimplementedText = TranslatableComponent("text.observable.unimplemented")
+    val fpsText = Component.translatable("text.observable.profile_fps")
+    val unimplementedText = Component.translatable("text.observable.unimplemented")
 
     fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
@@ -122,7 +121,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 height / 2 - 48,
                 100,
                 20,
-                TranslatableComponent("text.observable.profile_tps")
+                Component.translatable("text.observable.profile_tps")
             ) {
                 val duration = (action as Action.NewProfile).duration
                 Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
@@ -149,7 +148,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 startBtn.y + startBtn.height + 4,
                 fpsBtn.x + fpsBtn.width - startBtn.x,
                 20,
-                TranslatableComponent("text.observable.sampler"),
+                Component.translatable("text.observable.sampler"),
                 sample
             ) {
                 sample = it
@@ -181,7 +180,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 editField.y,
                 smallWidth,
                 20,
-                TranslatableComponent("text.observable.get_btn")
+                Component.translatable("text.observable.get_btn")
             ) {
                 getData(editField.value)
             }
@@ -193,7 +192,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 editField.y + editField.height + 4,
                 editField.width,
                 20,
-                TranslatableComponent("text.observable.overlay"),
+                Component.translatable("text.observable.overlay"),
                 Overlay.enabled
             ) {
                 if (it) {
@@ -217,7 +216,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 overlayBtn.y + overlayBtn.height + 8,
                 smallWidth,
                 20,
-                TranslatableComponent("text.observable.docs")
+                Component.translatable("text.observable.docs")
             ) {
                 openLink("https://github.com/tasgon/observable/wiki")
             }
@@ -228,7 +227,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 learnBtn.y,
                 smallWidth,
                 20,
-                TranslatableComponent("text.observable.discord")
+                Component.translatable("text.observable.discord")
             ) {
                 openLink("https://discord.gg/sfPbb3b5tF")
             }
@@ -239,7 +238,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 helpBtn.y,
                 smallWidth,
                 20,
-                TranslatableComponent("text.observable.donate")
+                Component.translatable("text.observable.donate")
             ) {
                 openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
             }

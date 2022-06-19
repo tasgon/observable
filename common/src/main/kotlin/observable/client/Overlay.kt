@@ -199,7 +199,9 @@ object Overlay {
             vertexBuf?.let {
                 RenderSystem.setShader { GameRenderer.getPositionColorShader() }
                 RenderSystem.disableTexture()
+                it.bind()
                 it.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getPositionColorShader()!!)
+                VertexBuffer.unbind()
                 RenderSystem.enableTexture()
             }
         }
@@ -223,9 +225,11 @@ object Overlay {
             drawBlockOutline(entry, stack, buf)
         }
 
-        buf.end()
+        val rendered = buf.end()
         val vbuf = VertexBuffer()
-        vbuf.upload(buf)
+        vbuf.bind()
+        vbuf.upload(rendered)
+        VertexBuffer.unbind()
         vertexBuf = vbuf
         dataAvailable = false
     }

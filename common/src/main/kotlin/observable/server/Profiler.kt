@@ -9,8 +9,7 @@ import net.minecraft.Util
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.network.chat.ClickEvent
-import net.minecraft.network.chat.TextComponent
-import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
@@ -116,7 +115,7 @@ class Profiler {
             GameInstance.getServer()!!.playerList.players,
             S2CPacket.ProfilingStarted(start + durMs)
         )
-        Observable.LOGGER.info("${(ctx.player.name as TextComponent).text} started profiler for $duration s")
+        Observable.LOGGER.info("${ctx.player.gameProfile.name} started profiler for $duration s")
         Timer("Profiler", false).schedule(durMs) {
             stopRunning()
         }
@@ -133,7 +132,7 @@ class Profiler {
             GZIPOutputStream(conn.outputStream).bufferedWriter(Charsets.UTF_8).use { it.write(serialized) }
 
             val profileURL = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            val link = TextComponent(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
+            val link = Component.literal(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
                 it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
             }
             player?.sendMessage(TranslatableComponent("text.observable.profile_uploaded", link), Util.NIL_UUID)
@@ -153,7 +152,7 @@ class Profiler {
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
         val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, serverTraceMap)
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
-        Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
+        Observable.LOGGER.info("Sending to ${players.map { it.gameProfile.name }}")
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))
         uploadProfile(data)
         Observable.LOGGER.info("Data transfer complete!")
