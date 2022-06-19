@@ -18,8 +18,7 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.commands.Commands.literal
 import net.minecraft.network.chat.ClickEvent
-import net.minecraft.network.chat.TextComponent
-import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
@@ -73,7 +72,7 @@ object Observable {
             GameInstance.getServer()?.allLevels?.filter {
                 it.dimension().location().equals(t.level)
             }?.get(0)?.let { level ->
-                LOGGER.info("Receive request from ${(player.name as TextComponent).text} in " +
+                LOGGER.info("Receive request from ${player.gameProfile.name} in " +
                         "${player.level.dimension().location()} to go to ${level.dimension().location()}")
                 Scheduler.SERVER.enqueue {
                     if (player.level != level) with(player.position()) {
@@ -91,7 +90,7 @@ object Observable {
                             LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
                             player.moveTo(this)
                         } ?: player.displayClientMessage(
-                            TranslatableComponent("text.observable.entity_not_found", t.level.toString()), true)
+                            Component.translatable("text.observable.entity_not_found", t.level.toString()), true)
                     }
                 }
             }
@@ -150,8 +149,8 @@ object Observable {
             if (ProfileScreen.HAS_BEEN_OPENED) return@register
             Observable.LOGGER.info("Notifying player")
             val tps = "%.2f".format(t.tps)
-            GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.suggest", tps,
-                TranslatableComponent("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
+            GameInstance.getClient().gui.chat.addMessage(Component.translatable("text.observable.suggest", tps,
+                Component.translatable("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
                     .withStyle {
                         it.withClickEvent(object : ClickEvent(null, "") {
                             override fun getAction(): Action? {
@@ -173,7 +172,7 @@ object Observable {
             val cmd = literal("observable")
                 .requires { it.hasPermission(4) }
                     .executes {
-                        it.source.sendSuccess(TextComponent(ServerSettings.toString()), false)
+                        it.source.sendSuccess(Component.literal(ServerSettings.toString()), false)
                         1
                     }
                 .then(literal("set").let {
@@ -187,7 +186,7 @@ object Observable {
                                     1
                                 } catch (e: Exception) {
                                     e.printStackTrace()
-                                    ctx.source.sendFailure(TextComponent("Error setting value\n${e.toString()}"))
+                                    ctx.source.sendFailure(Component.literal("Error setting value\n${e.toString()}"))
                                     0
                                 }
                             }))

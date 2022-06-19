@@ -2,6 +2,7 @@ package observable.mixin;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -33,8 +34,8 @@ public class ServerLevelMixin {
     }
 
     @Redirect(method = "tickBlock", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/state/BlockState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Ljava/util/Random;)V"))
-    public final void onTickBlock(BlockState state, ServerLevel level, BlockPos pos, Random random) {
+            target = "Lnet/minecraft/world/level/block/state/BlockState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"))
+    public final void onTickBlock(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (Props.notProcessing) state.tick(level, pos, random);
         else {
             if (Props.blockDepth < 0) Props.blockDepth = Thread.currentThread().getStackTrace().length - 1;

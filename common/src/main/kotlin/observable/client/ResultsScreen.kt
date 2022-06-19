@@ -16,8 +16,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.ClickEvent
-import net.minecraft.network.chat.TextComponent
-import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import observable.Observable
 import observable.net.C2SPacket
@@ -32,7 +31,7 @@ import kotlin.collections.HashSet
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")) {
+class ResultsScreen : Screen(Component.translatable("screens.observable.results")) {
     companion object {
         lateinit var implGlfw: ImplGlfw
         lateinit var implGL: ImplBestGL
@@ -203,8 +202,8 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
         } catch (e: Exception) {
             e.printStackTrace()
             val mc = Minecraft.getInstance()
-            mc.player?.chat(TranslatableComponent("text.observable.error", e.message).string)
-            mc.player?.chat(TranslatableComponent("text.observable.report").string)
+            mc.player?.chat(Component.translatable("text.observable.error", e.message).string)
+            mc.player?.chat(Component.translatable("text.observable.report").string)
             mc.screen = null
         }
     }
@@ -233,11 +232,11 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             }.encodeToString(Observable.RESULTS))
         }
 
-        val link = TextComponent(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
+        val link = Component.literal(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
             it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_FILE, dir.absolutePath))
         }
 
-        GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.profile_saved", link))
+        GameInstance.getClient().gui.chat.addMessage(Component.translatable("text.observable.profile_saved", link))
     }
 
     inline fun doRender(i: Int, j: Int, f: Float) {

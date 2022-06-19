@@ -8,13 +8,13 @@ import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.network.chat.TranslatableComponent
+import net.minecraft.network.chat.Component
 import observable.Observable
 import observable.net.C2SPacket
 import java.io.File
 import kotlin.math.roundToInt
 
-class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
+class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
     companion object {
         private val STATUS_FILE get() = File("o_prof")
         var HAS_BEEN_OPENED = STATUS_FILE.exists()
@@ -45,7 +45,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             is TPSProfilerRunning -> "Running for another %.1f seconds"
                 .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0) )
             is TPSProfilerCompleted -> "Profiling finished, please wait..."
-            is ObservableStatus -> TranslatableComponent(text).string
+            is ObservableStatus -> Component.translatable(text).string
         }
     }
 
@@ -56,8 +56,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     lateinit var resultsBtn: Button
     lateinit var overlayBtn: BetterCheckbox
 
-    val fpsText = TranslatableComponent("text.observable.profile_fps")
-    val unimplementedText = TranslatableComponent("text.observable.unimplemented")
+    val fpsText = Component.translatable("text.observable.profile_fps")
+    val unimplementedText = Component.translatable("text.observable.unimplemented")
 
     fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
@@ -75,7 +75,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         ProfileScreen.HAS_BEEN_OPENED = true
 
         val startBtn = addRenderableWidget(Button(
-            0, height / 2 - 48, 100, 20, TranslatableComponent("text.observable.profile_tps")
+            0, height / 2 - 48, 100, 20, Component.translatable("text.observable.profile_tps")
         ) {
             val duration = (action as Action.NewProfile).duration
             Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
@@ -90,16 +90,16 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
         val samplerBtn = addRenderableWidget(BetterCheckbox(startBtn.x, startBtn.y + startBtn.height + 4,
             fpsBtn.x + fpsBtn.width - startBtn.x, 20,
-            TranslatableComponent("text.observable.sampler"), sample) {
+            Component.translatable("text.observable.sampler"), sample) {
             sample = it
         })
 
         resultsBtn = addRenderableWidget(Button(samplerBtn.x, samplerBtn.y + samplerBtn.height + 16,
-                fpsBtn.x + fpsBtn.width - samplerBtn.x, 20, TranslatableComponent("text.observable.results")) {
+                fpsBtn.x + fpsBtn.width - samplerBtn.x, 20, Component.translatable("text.observable.results")) {
             Minecraft.getInstance().setScreen(ResultsScreen())
         })
         overlayBtn = addRenderableWidget(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
-            20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
+            20, Component.translatable("text.observable.overlay"), Overlay.enabled) {
             if (it) synchronized(Overlay) {
                 Overlay.load()
             }
@@ -114,15 +114,15 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
         val width = resultsBtn.width / 3 - 2
         val learnBtn = addRenderableWidget(Button(startBtn.x, overlayBtn.y + overlayBtn.height + 8,
-            width, 20, TranslatableComponent("text.observable.docs")) {
+            width, 20, Component.translatable("text.observable.docs")) {
             openLink("https://github.com/tasgon/observable/wiki")
         })
         val helpBtn = addRenderableWidget(Button(learnBtn.x + learnBtn.width + 4, learnBtn.y,
-            width, 20, TranslatableComponent("text.observable.discord")) {
+            width, 20, Component.translatable("text.observable.discord")) {
             openLink("https://discord.gg/sfPbb3b5tF")
         })
         val donateBtn = addRenderableWidget(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
-            width, 20, TranslatableComponent("text.observable.donate")) {
+            width, 20, Component.translatable("text.observable.donate")) {
             openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
         })
 
