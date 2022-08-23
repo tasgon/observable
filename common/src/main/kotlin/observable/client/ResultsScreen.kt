@@ -1,6 +1,5 @@
 package observable.client
 
-import observable.server.ChunkMap
 import observable.server.ProfilingData
 import com.mojang.blaze3d.vertex.PoseStack
 import glm_.vec2.Vec2
@@ -80,7 +79,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
     var filterMap: Map<ResourceLocation, List<ResultsEntry>> = mapOf()
     var dimTimingsMap = HashMap<ResourceLocation, Double>()
     lateinit var typeTimingsMap: List<TypeTimingsEntry>
-    lateinit var chunkMap: ChunkMap
 
     var fontScale: Float = Minecraft.getInstance().window.let {
         if (it.isFullscreen) it.width.toFloat() / 1920.0f
@@ -103,12 +101,12 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             (data.entities.keys + data.blocks.keys).forEach {
                 val list: MutableList<ResultsEntry> = mutableListOf()
                 data.entities[it]?.map {
-                    ResultsEntry.EntityEntry(it.obj, it.type,
+                    ResultsEntry.EntityEntry(it.entityId!!, it.type,
                         it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
                         if (norm) ticks else it.ticks, it.traces)
                 }?.let { list += it }
                 data.blocks[it]?.map {
-                    ResultsEntry.BlockEntry(it.obj, it.type,
+                    ResultsEntry.BlockEntry(it.position, it.type,
                         it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0),
                         if (norm) ticks else it.ticks, it.traces)
                 }?.let { list += it }
@@ -128,8 +126,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
             }.sortedByDescending {
                 it.rate
             }
-
-            chunkMap = data.chunks
 
             applyMapFilter()
         }
@@ -316,36 +312,6 @@ class ResultsScreen : Screen(TranslatableComponent("screens.observable.results")
                 ImGui.setNextWindowSize(indivSize, Cond.Once)
                 window("Chunks", null) {
                     ImGui.setWindowFontScale(fontScale)
-                    chunkMap.forEach { (dim, chunks) ->
-                        collapsingHeader(
-                            "$dim -- ${(dimTimingsMap[dim]!! / 1000).roundToInt()} us/t" +
-                                    " (${chunks.size} items)"
-                        ) {
-                            ImGui.columns(3, "chunkCol", false)
-                            ImGui.setColumnWidth(0, ImGui.windowWidth * .5F)
-
-                            chunks.forEach {
-                                val (pos, rate) = it
-                                ImGui.text("${pos.x}, ${pos.z}")
-                                ImGui.nextColumn()
-                                ImGui.text("${(rate / 1000).roundToInt()} us/t")
-                                ImGui.nextColumn()
-                                withId(it) {
-                                    button("Visit") {
-                                        Observable.CHANNEL.sendToServer(
-                                            C2SPacket.RequestTeleport(
-                                                dim,
-                                                null, BlockPos(pos.x * 16, 100, pos.z * 16)
-                                            )
-                                        )
-                                    }
-                                }
-                                ImGui.nextColumn()
-                            }
-
-                            ImGui.columns(1)
-                        }
-                    }
                 }
 
                 ImGui.setNextWindowPos(Vec2(startingPos.x + indivSize.x + 100, startingPos.y), Cond.Once)

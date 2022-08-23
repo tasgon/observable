@@ -115,11 +115,11 @@ object Overlay {
         val ticks = data.ticks
         val norm = ClientSettings.normalized
         entities = data.entities[levelLocation]?.map {
-            Entry.EntityEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
+            Entry.EntityEntry(it.entityId!!, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
         }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
 
         blocks = data.blocks[levelLocation]?.map {
-            Entry.BlockEntry(it.obj, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
+            Entry.BlockEntry(it.position, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
         }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
         blockMap = blocks.groupBy { ChunkPos(it.pos) }
 
