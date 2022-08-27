@@ -5,6 +5,7 @@
 
 package observable.server
 
+import dev.architectury.platform.Platform
 import dev.architectury.utils.GameInstance
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
+import observable.Observable
 import observable.net.*
 import observable.server.Profiler
 import observable.server.Remapper
@@ -61,8 +63,14 @@ data class ProfilingData(
             }.toMap()
 
             val diagnostics = buildJsonObject {
-                put("systemReport", buildJsonArray {
+                put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
+                put("System Report", buildJsonArray {
                     SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
+                })
+                put("Mods", buildJsonArray {
+                    Platform.getMods().forEach { mod ->
+                        add(JsonPrimitive("${mod.name} ${mod.version}"))
+                    }
                 })
             }
 
