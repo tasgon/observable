@@ -18,7 +18,6 @@ object ClientSettings {
     var normalized = true
         set(v) {
             field = v
-            (Minecraft.getInstance().screen as? ResultsScreen)?.loadData()
             Overlay.loadSync()
         }
 

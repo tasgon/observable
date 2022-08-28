@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
 import com.mojang.math.Matrix4f
-import glm_.pow
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
@@ -17,6 +16,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 object Overlay {
@@ -56,7 +56,7 @@ object Overlay {
     var vertexBuf: VertexBuffer? = null
     var dataAvailable = false
 
-    val DIST_FAC = 1.0 / (2*16.pow(2)).pow(.5F)
+    val DIST_FAC = 1.0 / (2*16.0.pow(2)).pow(.5)
 
     val font: Font by lazy { Minecraft.getInstance().font }
 
@@ -159,7 +159,8 @@ object Overlay {
             for (x in (cpos.x - dist)..(cpos.x + dist)) {
                 for (y in (cpos.z - dist)..(cpos.z + dist)) {
                     blockMap[ChunkPos(x, y)]?.forEach { entry ->
-                        if (camera.blockPosition.distSqr(entry.pos) < ClientSettings.maxBlockDist.pow(2)) {
+                        val maxDist = ClientSettings.maxBlockDist * ClientSettings.maxBlockDist;
+                        if (camera.blockPosition.distSqr(entry.pos) < maxDist) {
                             drawBlock(entry, poseStack, camera, bufSrc)
                         }
                     }

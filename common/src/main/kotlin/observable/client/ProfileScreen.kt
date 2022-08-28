@@ -96,7 +96,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
 
         resultsBtn = addRenderableWidget(Button(samplerBtn.x, samplerBtn.y + samplerBtn.height + 16,
                 fpsBtn.x + fpsBtn.width - samplerBtn.x, 20, TranslatableComponent("text.observable.results")) {
-            Minecraft.getInstance().setScreen(ResultsScreen())
+//            Minecraft.getInstance().setScreen(ResultsScreen())
         })
         overlayBtn = addRenderableWidget(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
