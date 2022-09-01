@@ -4,9 +4,7 @@
   "version": "${version}",
   "name": "Observable",
   "description": "See what's lagging your world.",
-  "authors": [
-    "tasgon"
-  ],
+  "authors": ["tasgon"],
   "contact": {
     "homepage": "https://github.com/tasgon/observable",
     "sources": "https://github.com/tasgon/observable"
@@ -15,16 +13,10 @@
   "icon": "assets/examplemod/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": [
-      "observable.fabric.ObservableFabric"
-    ],
-    "client": [
-      "observable.fabric.Client"
-    ]
+    "main": ["observable.fabric.ObservableFabric"],
+    "client": ["observable.fabric.Client"]
   },
-  "mixins": [
-    "observable.common.json"
-  ],
+  "mixins": ["observable.common.json"],
   "depends": {
     "fabricloader": ">=0.12.0",
     "fabric": "*",

@@ -56,13 +56,21 @@ object Overlay {
     var vertexBuf: VertexBuffer? = null
     var dataAvailable = false
 
-    val DIST_FAC = 1.0 / (2*16.0.pow(2)).pow(.5)
+    val DIST_FAC = 1.0 / (2 * 16.0.pow(2)).pow(.5)
 
     val font: Font by lazy { Minecraft.getInstance().font }
 
     class OverlayRenderType(name: String, fmt: VertexFormat, mode: VertexFormat.Mode) :
-        RenderType(name, fmt,
-            VertexFormat.Mode.QUADS, 256, false, true, {}, {}) {
+        RenderType(
+            name,
+            fmt,
+            VertexFormat.Mode.QUADS,
+            256,
+            false,
+            true,
+            {},
+            {}
+        ) {
         companion object {
             fun build(): RenderType {
                 val boolType = java.lang.Boolean.TYPE
@@ -71,16 +79,30 @@ object Overlay {
                 // create a custom RenderType outside of the class. However, we need to make our own to have the block
                 // outlines visible through walls. We can't mixin an invoker either as the CompositeRenderType is private
                 // within RenderType. We can get around that using reflection, hence this monstrosity.
-                val parameterTypes = arrayOf(String::class.java, VertexFormat::class.java,
-                    VertexFormat.Mode::class.java, Integer.TYPE, boolType, boolType,
-                    RenderType.CompositeState::class.java)
+                val parameterTypes = arrayOf(
+                    String::class.java,
+                    VertexFormat::class.java,
+                    VertexFormat.Mode::class.java,
+                    Integer.TYPE,
+                    boolType,
+                    boolType,
+                    RenderType.CompositeState::class.java
+                )
                 val fn = RenderType::class.java.declaredMethods.filter { method ->
                     method.parameterTypes.contentEquals(parameterTypes)
                 }.first()
                 fn.isAccessible = true
 
-                return fn.invoke(null, "heat", DefaultVertexFormat.POSITION_COLOR,
-                    VertexFormat.Mode.QUADS, 256, false, false, buildCompositeState()) as RenderType
+                return fn.invoke(
+                    null,
+                    "heat",
+                    DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS,
+                    256,
+                    false,
+                    false,
+                    buildCompositeState()
+                ) as RenderType
             }
 
             private fun buildCompositeState(): CompositeState {
@@ -89,16 +111,20 @@ object Overlay {
 //                    .setTextureState(EmptyTextureStateShard({}, {}))
                     .setDepthTestState(DepthTestStateShard("always", 519))
                     .setTransparencyState(
-                        RenderStateShard.TransparencyStateShard("src_to_one",
+                        RenderStateShard.TransparencyStateShard(
+                            "src_to_one",
                             {
                                 RenderSystem.enableBlend()
-                                RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
-                                    GlStateManager.DestFactor.ONE)
+                                RenderSystem.blendFunc(
+                                    GlStateManager.SourceFactor.SRC_ALPHA,
+                                    GlStateManager.DestFactor.ONE
+                                )
                             }
                         ) {
                             RenderSystem.disableBlend()
                             RenderSystem.defaultBlendFunc()
-                        }).createCompositeState(true)
+                        }
+                    ).createCompositeState(true)
             }
         }
     }
@@ -124,7 +150,6 @@ object Overlay {
         blockMap = blocks.groupBy { ChunkPos(it.pos) }
 
         dataAvailable = true
-
     }
 
     inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) {
@@ -136,7 +161,6 @@ object Overlay {
 
         val camera = Minecraft.getInstance().gameRenderer.mainCamera
         val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
-
 
         RenderSystem.disableDepthTest()
         RenderSystem.enableBlend()
@@ -159,15 +183,17 @@ object Overlay {
             for (x in (cpos.x - dist)..(cpos.x + dist)) {
                 for (y in (cpos.z - dist)..(cpos.z + dist)) {
                     blockMap[ChunkPos(x, y)]?.forEach { entry ->
-                        val maxDist = ClientSettings.maxBlockDist * ClientSettings.maxBlockDist;
+                        val maxDist = ClientSettings.maxBlockDist * ClientSettings.maxBlockDist
                         if (camera.blockPosition.distSqr(entry.pos) < maxDist) {
                             drawBlock(entry, poseStack, camera, bufSrc)
                         }
                     }
                 }
             }
-            if (entities.size < ClientSettings.maxEntityCount) for (entry in entities) {
-                drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
+            if (entities.size < ClientSettings.maxEntityCount) {
+                for (entry in entities) {
+                    drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
+                }
             }
 
             vertexBuf?.let {
@@ -204,28 +230,45 @@ object Overlay {
         dataAvailable = false
     }
 
-    inline fun drawEntity(entry: Entry.EntityEntry, poseStack: PoseStack,
-                          partialTicks: Float, camera: Camera, bufSrc: MultiBufferSource) {
+    inline fun drawEntity(
+        entry: Entry.EntityEntry,
+        poseStack: PoseStack,
+        partialTicks: Float,
+        camera: Camera,
+        bufSrc: MultiBufferSource
+    ) {
         val rate = entry.rate
         val entity = entry.entity ?: return
-        if (entity.isRemoved || (entity == Minecraft.getInstance().player
-            && entity.deltaMovement.lengthSqr() > .01)) return
+        if (entity.isRemoved || (
+            entity == Minecraft.getInstance().player &&
+                entity.deltaMovement.lengthSqr() > .01
+            )
+        ) {
+            return
+        }
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
         var pos = entity.position()
         if (camera.position.distanceTo(pos) > ClientSettings.maxEntityDist) return
-        if (entity.isAlive) pos = pos.add(with(entity.deltaMovement) {
-            Vec3(x, y.coerceAtLeast(0.0), z)
-        }.scale(partialTicks.toDouble()))
-        else text += " [X]"
+        if (entity.isAlive) {
+            pos = pos.add(
+                with(entity.deltaMovement) {
+                    Vec3(x, y.coerceAtLeast(0.0), z)
+                }.scale(partialTicks.toDouble())
+            )
+        } else {
+            text += " [X]"
+        }
 
         pos.apply {
             poseStack.translate(x, y + entity.bbHeight + 0.33, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
-            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, entry.color.hex, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
+            font.drawInBatch(
+                text, -font.width(text).toFloat() / 2, 0F, entry.color.hex, false,
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0
+            )
         }
 
         poseStack.popPose()
@@ -273,8 +316,12 @@ object Overlay {
         poseStack.popPose()
     }
 
-    private inline fun drawBlock(entry: Entry.BlockEntry, poseStack: PoseStack,
-                                 camera: Camera, bufSrc: MultiBufferSource) {
+    private inline fun drawBlock(
+        entry: Entry.BlockEntry,
+        poseStack: PoseStack,
+        camera: Camera,
+        bufSrc: MultiBufferSource
+    ) {
         poseStack.pushPose()
 
         val (pos, rate) = entry
@@ -285,8 +332,10 @@ object Overlay {
             poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
-            font.drawInBatch(text, -font.width(text).toFloat() / 2, 0F, col, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0)
+            font.drawInBatch(
+                text, -font.width(text).toFloat() / 2, 0F, col, false,
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0
+            )
         }
 
         poseStack.popPose()

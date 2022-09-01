@@ -1,13 +1,13 @@
 @file:UseSerializers(
-    EntitySerializer::class, ResourceLocationSerializer::class,
-    BlockEntitySerializer::class, BlockPosSerializer::class
+    EntitySerializer::class,
+    ResourceLocationSerializer::class,
+    BlockEntitySerializer::class,
+    BlockPosSerializer::class
 )
 
 package observable.server
 
 import dev.architectury.platform.Platform
-import dev.architectury.utils.GameInstance
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.JsonObject
@@ -20,15 +20,9 @@ import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.Level
-import net.minecraft.world.phys.Vec3
 import observable.Observable
 import observable.net.*
-import observable.server.Profiler
-import observable.server.Remapper
-import observable.server.TraceMap
-import kotlin.math.roundToInt
 
 fun getPosition(obj: Any?): BlockPos = when (obj) {
     is Entity -> BlockPos(obj.position())
@@ -40,13 +34,15 @@ fun getPosition(obj: Any?): BlockPos = when (obj) {
 data class ProfilingData(
     val entities: Map<ResourceLocation, List<Entry>>,
     val blocks: Map<ResourceLocation, List<Entry>>,
-    val traces: SerializedTraceMap?, val ticks: Int
+    val traces: SerializedTraceMap?,
+    val ticks: Int
 ) {
     companion object {
         fun create(
             entities: Map<Entity, Profiler.TimingData>,
             blocks: Map<ResourceKey<Level>, Map<BlockPos, Profiler.TimingData>>,
-            ticks: Int, traceMap: TraceMap? = null
+            ticks: Int,
+            traceMap: TraceMap? = null
         ): ProfilingData {
             val entityEntries =
                 entities.asIterable().groupBy { it.key.level.dimension().location() }.mapValues { (_, entries) ->
@@ -61,44 +57,63 @@ data class ProfilingData(
                 }
             }.toMap()
 
-            return ProfilingData(entityEntries, blockEntries,
-                traceMap?.let { SerializedTraceMap.create(it) }, ticks)
+            return ProfilingData(
+                entityEntries,
+                blockEntries,
+                traceMap?.let { SerializedTraceMap.create(it) },
+                ticks
+            )
         }
     }
 
     @Serializable
     data class Entry(
-        val entityId: Int? = null, val position: BlockPos, val type: String, val rate: Double,
-        val ticks: Int, val traces: SerializedTraceMap
+        val entityId: Int? = null,
+        val position: BlockPos,
+        val type: String,
+        val rate: Double,
+        val ticks: Int,
+        val traces: SerializedTraceMap
     ) {
         constructor(obj: Any, type: String, data: Profiler.TimingData) : this(
-            (obj as? Entity)?.id, getPosition(obj), type,
-            data.time.toDouble() / data.ticks.toDouble(), data.ticks, SerializedTraceMap.create(data.traces)
+            (obj as? Entity)?.id,
+            getPosition(obj),
+            type,
+            data.time.toDouble() / data.ticks.toDouble(),
+            data.ticks,
+            SerializedTraceMap.create(data.traces)
         )
     }
 
     @Serializable
     data class SerializedStackTrace(
-        val classname: String, val fileName: String?,
-        val lineNumber: Int, val methodName: String
+        val classname: String,
+        val fileName: String?,
+        val lineNumber: Int,
+        val methodName: String
     ) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
     }
 
     @Serializable
     data class SerializedTraceMap(
-        val className: String, val methodName: String,
-        val children: List<SerializedTraceMap>, val count: Int
+        val className: String,
+        val methodName: String,
+        val children: List<SerializedTraceMap>,
+        val count: Int
     ) {
         companion object {
             fun create(traceMap: TraceMap): SerializedTraceMap {
                 Remapper.transform(traceMap)
 
-                return SerializedTraceMap(traceMap.className, traceMap.methodName,
+                return SerializedTraceMap(
+                    traceMap.className,
+                    traceMap.methodName,
                     traceMap.children.map { (_, map) ->
                         Remapper.transform(map)
                         SerializedTraceMap.create(map)
-                    }.sortedByDescending { it.count }, traceMap.count
+                    }.sortedByDescending { it.count },
+                    traceMap.count
                 )
             }
         }
@@ -109,15 +124,24 @@ data class ProfilingData(
 
 @Serializable
 data class DataWithDiagnostics(val data: ProfilingData, val diagnostics: JsonObject) {
-    constructor(data: ProfilingData) : this(data, buildJsonObject {
-        put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
-        put("System Report", buildJsonArray {
-            SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
-        })
-        put("Mods", buildJsonArray {
-            Platform.getMods().forEach { mod ->
-                add(JsonPrimitive("${mod.name} ${mod.version}"))
-            }
-        })
-    })
+    constructor(data: ProfilingData) : this(
+        data,
+        buildJsonObject {
+            put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
+            put(
+                "System Report",
+                buildJsonArray {
+                    SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
+                }
+            )
+            put(
+                "Mods",
+                buildJsonArray {
+                    Platform.getMods().forEach { mod ->
+                        add(JsonPrimitive("${mod.name} ${mod.version}"))
+                    }
+                }
+            )
+        }
+    )
 }

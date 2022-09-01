@@ -1,7 +1,7 @@
 package observable.net
 
-import observable.server.ProfilingData
 import kotlinx.serialization.Serializable
+import observable.server.ProfilingData
 import java.util.*
 
 class S2CPacket {

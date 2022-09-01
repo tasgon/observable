@@ -19,3 +19,5 @@ classes/
 *.launch
 
 .architectury-transformer/
+
+assets/

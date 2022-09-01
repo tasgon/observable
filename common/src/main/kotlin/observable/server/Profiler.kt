@@ -1,6 +1,5 @@
 package observable.server
 
-import observable.server.ProfilingData
 import dev.architectury.networking.NetworkManager
 import dev.architectury.utils.GameInstance
 import kotlinx.serialization.encodeToString
@@ -16,16 +15,12 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.entity.TickingBlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
 import observable.Observable
 import observable.Props
 import observable.net.S2CPacket
-import java.io.BufferedReader
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
@@ -63,21 +58,33 @@ class Profiler {
     fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) = blockTimingsMap.getOrPut(level.dimension()) {
         HashMap()
     }.getOrPut(blockEntity.pos) {
-        TimingData(0, 0, TraceMap(blockEntity::class),
-            blockEntity.type)
+        TimingData(
+            0,
+            0,
+            TraceMap(blockEntity::class),
+            blockEntity.type
+        )
     }
 
     fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
         blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
             .getOrPut(pos) {
-                TimingData(0, 0, TraceMap(blockState::class),
-                    blockState.block.descriptionId)
+                TimingData(
+                    0,
+                    0,
+                    TraceMap(blockState::class),
+                    blockState.block.descriptionId
+                )
             }
 
     fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
         blockTimingsMap.getOrPut(level.dimension()) { HashMap() }.getOrPut(pos) {
-            TimingData(0, 0, TraceMap(fluidState::class),
-                Registry.FLUID.getKey(fluidState.type).toString())
+            TimingData(
+                0,
+                0,
+                TraceMap(fluidState::class),
+                Registry.FLUID.getKey(fluidState.type).toString()
+            )
         }
 
     fun startRunning(duration: Int? = null, sample: Boolean = false, ctx: NetworkManager.PacketContext) {

@@ -1,16 +1,15 @@
 package observable
 
-import observable.server.ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
-import com.mojang.brigadier.arguments.StringArgumentType.string
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.string
 import com.mojang.brigadier.context.CommandContext
-import dev.architectury.event.events.common.CommandRegistrationEvent
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientPlayerEvent
 import dev.architectury.event.events.client.ClientTickEvent
+import dev.architectury.event.events.common.CommandRegistrationEvent
 import dev.architectury.event.events.common.LifecycleEvent
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
@@ -32,6 +31,7 @@ import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
 import observable.server.Profiler
+import observable.server.ProfilingData
 import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
@@ -40,8 +40,14 @@ import org.lwjgl.glfw.GLFW
 object Observable {
     const val MOD_ID = "observable"
 
-    val PROFILE_KEYBIND by lazy { KeyMapping("key.observable.profile",
-        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.observable.keybinds") }
+    val PROFILE_KEYBIND by lazy {
+        KeyMapping(
+            "key.observable.profile",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_R,
+            "category.observable.keybinds"
+        )
+    }
 
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
     val LOGGER = LogManager.getLogger("Observable")
@@ -50,8 +56,8 @@ object Observable {
     val PROFILE_SCREEN by lazy { ProfileScreen() }
 
     fun hasPermission(player: Player) =
-        (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) ?: true)
-            || (GameInstance.getServer()?.isSingleplayer ?: false)
+        (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) ?: true) ||
+            (GameInstance.getServer()?.isSingleplayer ?: false)
 
     @JvmStatic
     fun init() {
@@ -72,8 +78,11 @@ object Observable {
             (supplier.get().player as? ServerPlayer)?.let {
                 CHANNEL.sendToPlayer(
                     it,
-                    if (hasPermission(it)) S2CPacket.Availability.Available
-                    else S2CPacket.Availability.NoPermissions
+                    if (hasPermission(it)) {
+                        S2CPacket.Availability.Available
+                    } else {
+                        S2CPacket.Availability.NoPermissions
+                    }
                 )
             }
         }
@@ -103,7 +112,7 @@ object Observable {
             LOGGER.info("Received profiling result with ${data.size} entries")
             Overlay.loadSync()
         }
-        
+
         CHANNEL.register { t: S2CPacket.Availability, supplier ->
             when (t) {
                 S2CPacket.Availability.Available -> {
@@ -121,16 +130,21 @@ object Observable {
             if (ProfileScreen.HAS_BEEN_OPENED) return@register
             Observable.LOGGER.info("Notifying player")
             val tps = "%.2f".format(t.tps)
-            GameInstance.getClient().gui.chat.addMessage(TranslatableComponent("text.observable.suggest", tps,
-                TranslatableComponent("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
-                    .withStyle {
-                        it.withClickEvent(object : ClickEvent(null, "") {
-                            override fun getAction(): Action? {
-                                GameInstance.getClient().setScreen(PROFILE_SCREEN)
-                                return null
-                            }
-                        })
-                    }))
+            GameInstance.getClient().gui.chat.addMessage(
+                TranslatableComponent(
+                    "text.observable.suggest",
+                    tps,
+                    TranslatableComponent("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
+                        .withStyle {
+                            it.withClickEvent(object : ClickEvent(null, "") {
+                                override fun getAction(): Action? {
+                                    GameInstance.getClient().setScreen(PROFILE_SCREEN)
+                                    return null
+                                }
+                            })
+                        }
+                )
+            )
         }
 
         LifecycleEvent.SERVER_STARTED.register {
@@ -143,55 +157,74 @@ object Observable {
         CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
             val cmd = literal("observable")
                 .requires { it.hasPermission(4) }
-                    .executes {
-                        it.source.sendSuccess(TextComponent(ServerSettings.toString()), false)
-                        1
+                .executes {
+                    it.source.sendSuccess(TextComponent(ServerSettings.toString()), false)
+                    1
+                }
+                .then(
+                    literal("set").let {
+                        ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
+                            val argType = TypeMap[field.type] ?: return@fold setCmd
+                            setCmd.then(
+                                literal(field.name).then(
+                                    argument("newVal", argType())
+                                        .executes { ctx ->
+                                            try {
+                                                field.isAccessible = true
+                                                field.set(ServerSettings, ctx.getArgument("newVal", field.type))
+                                                1
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                                ctx.source.sendFailure(TextComponent("Error setting value\n$e"))
+                                                0
+                                            }
+                                        }
+                                )
+                            )
+                        }
                     }
-                .then(literal("set").let {
-                    ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
-                        val argType = TypeMap[field.type] ?: return@fold setCmd
-                        setCmd.then(literal(field.name).then(argument("newVal", argType())
-                            .executes { ctx ->
-                                try {
-                                    field.isAccessible = true
-                                    field.set(ServerSettings, ctx.getArgument("newVal", field.type))
-                                    1
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    ctx.source.sendFailure(TextComponent("Error setting value\n${e.toString()}"))
-                                    0
-                                }
-                            }))
-                    }
-                })
-                .then(literal("tp").then(
-                    argument("dim", string())
-                        .then(literal("entity").then(
-                            argument("id", integer()).executes { ctx ->
-                                withDimMove(ctx) { player, level ->
-                                    val id = getInteger(ctx, "id")
-                                    level.getEntity(id)?.position()?.apply {
-                                        LOGGER.info("Moving to ($x, $y, $z) in ${level.toString()}")
-                                        player.moveTo(this)
-                                    } ?: player.displayClientMessage(
-                                        TranslatableComponent("text.observable.entity_not_found", level.toString()), true)
-                                }
-                                1
-                            }))
-                        .then(literal("position")
-                            .then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes { ctx ->
-                                    withDimMove(ctx) { player, _ ->
-                                        val (x, y, z) = listOf("x", "y", "z").map { getInteger(ctx, it).toDouble() }
-                                        player.moveTo(x, y, z)
+                )
+                .then(
+                    literal("tp").then(
+                        argument("dim", string())
+                            .then(
+                                literal("entity").then(
+                                    argument("id", integer()).executes { ctx ->
+                                        withDimMove(ctx) { player, level ->
+                                            val id = getInteger(ctx, "id")
+                                            level.getEntity(id)?.position()?.apply {
+                                                LOGGER.info("Moving to ($x, $y, $z) in $level")
+                                                player.moveTo(this)
+                                            } ?: player.displayClientMessage(
+                                                TranslatableComponent("text.observable.entity_not_found", level.toString()),
+                                                true
+                                            )
+                                        }
+                                        1
                                     }
-                                    1
-                                })))
+                                )
+                            )
+                            .then(
+                                literal("position")
+                                    .then(
+                                        argument("x", integer()).then(
+                                            argument("y", integer()).then(
+                                                argument("z", integer()).executes { ctx ->
+                                                    withDimMove(ctx) { player, _ ->
+                                                        val (x, y, z) = listOf("x", "y", "z").map { getInteger(ctx, it).toDouble() }
+                                                        player.moveTo(x, y, z)
+                                                    }
+                                                    1
+                                                }
+                                            )
+                                        )
+                                    )
 
+                            )
                     )
-                ))
+                )
 
             dispatcher.register(cmd)
-
         }
     }
 
@@ -204,11 +237,17 @@ object Observable {
         }?.get(0)!!
 
         Scheduler.SERVER.enqueue {
-            if (player.level != level) with(player.position()) {
-                (player as ServerPlayer).teleportTo(
-                    level, x, y, z,
-                    player.rotationVector.x, player.rotationVector.y
-                )
+            if (player.level != level) {
+                with(player.position()) {
+                    (player as ServerPlayer).teleportTo(
+                        level,
+                        x,
+                        y,
+                        z,
+                        player.rotationVector.x,
+                        player.rotationVector.y
+                    )
+                }
             }
 
             block(player, level)

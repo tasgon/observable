@@ -1,14 +1,12 @@
 package observable.net
 
-import kotlinx.serialization.*
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.protobuf.ProtoBuf
 import dev.architectury.networking.NetworkChannel
 import dev.architectury.networking.NetworkManager
+import kotlinx.serialization.*
+import kotlinx.serialization.protobuf.ProtoBuf
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
-import observable.Observable
 import org.apache.logging.log4j.LogManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -17,7 +15,6 @@ import java.util.*
 import java.util.function.Supplier
 import java.util.zip.*
 import kotlin.collections.HashMap
-import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
@@ -92,8 +89,11 @@ class BetterChannel(id: ResourceLocation) {
         this.register { t: PartialPacketBegin, supplier ->
             LOGGER.info("Received starting packet ${t.id} for ${t.type}")
             val type = PartialPacketAssembler.KNOWN_TYPES[t.type]
-            if (type != null) PartialPacketAssembler.MAP[t.id] = PartialPacketAssembler(type)
-            else LOGGER.warn("Could not find mapping for ${t.type}")
+            if (type != null) {
+                PartialPacketAssembler.MAP[t.id] = PartialPacketAssembler(type)
+            } else {
+                LOGGER.warn("Could not find mapping for ${t.type}")
+            }
         }
         this.register { t: PartialPacketData, supplier ->
             LOGGER.info("Received packet ${t.index + 1}/${t.length} of id ${t.id}")
@@ -134,18 +134,23 @@ class BetterChannel(id: ResourceLocation) {
     @OptIn(ExperimentalSerializationApi::class)
     inline fun <reified T> registerCompressed(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
         LOGGER.info("Registering ${T::class.java}")
-        rawChannel.register(T::class.java, { t, buf ->
-            val bs = ByteArrayOutputStream()
-            val deflater = Deflater()
-            deflater.setLevel(Deflater.BEST_COMPRESSION)
-            val deflaterStream = DeflaterOutputStream(bs, deflater)
-            deflaterStream.write(ProtoBuf.encodeToByteArray(t))
-            deflaterStream.close()
-            buf.writeByteArray(bs.toByteArray())
-        }, attempt {
-            val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
-            ProtoBuf.decodeFromByteArray<T>(istream.readBytes())
-        }, validate(consumer))
+        rawChannel.register(
+            T::class.java,
+            { t, buf ->
+                val bs = ByteArrayOutputStream()
+                val deflater = Deflater()
+                deflater.setLevel(Deflater.BEST_COMPRESSION)
+                val deflaterStream = DeflaterOutputStream(bs, deflater)
+                deflaterStream.write(ProtoBuf.encodeToByteArray(t))
+                deflaterStream.close()
+                buf.writeByteArray(bs.toByteArray())
+            },
+            attempt {
+                val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
+                ProtoBuf.decodeFromByteArray<T>(istream.readBytes())
+            },
+            validate(consumer)
+        )
         LOGGER.info("Registered ${T::class.java}")
     }
 
@@ -159,7 +164,7 @@ class BetterChannel(id: ResourceLocation) {
         val id = UUID.randomUUID().leastSignificantBits
         rawChannel.sendToPlayers(players, PartialPacketBegin(id, T::class.java.name))
         val size = bs.available() / PartialPacketAssembler.PACKET_SIZE +
-                (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
+            (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
         var idx = 0
         while (bs.available() > 0) {
             val arr = ByteArray(bs.available().coerceAtMost(PartialPacketAssembler.PACKET_SIZE))

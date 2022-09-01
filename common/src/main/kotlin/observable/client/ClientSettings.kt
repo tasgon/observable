@@ -1,7 +1,5 @@
 package observable.client
 
-import net.minecraft.client.Minecraft
-
 object ClientSettings {
     var minRate: Int = 0
         set(v) {
