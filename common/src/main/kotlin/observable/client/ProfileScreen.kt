@@ -1,17 +1,22 @@
 package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
-import it.unimi.dsi.fastutil.booleans.BooleanConsumer
+import dev.architectury.utils.GameInstance
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import net.minecraft.Util
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
 import observable.net.C2SPacket
 import java.io.File
+import java.net.URL
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
@@ -38,7 +43,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         data class NewProfile(var duration: Int) : Action()
         data class TPSProfilerRunning(val endTime: Long) : Action()
         object TPSProfilerCompleted : Action()
-        data class ObservableStatus(var text: String) : Action()
+        data class ObservableStatus(val text: String) : Action()
+        data class Custom(val text: String) : Action()
 
         val statusMsg get() = when (this) {
             is NewProfile -> "Duration (scroll): $duration seconds"
@@ -46,6 +52,7 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0) )
             is TPSProfilerCompleted -> "Profiling finished, please wait..."
             is ObservableStatus -> TranslatableComponent(text).string
+            is Custom -> text
         }
     }
 
@@ -53,7 +60,8 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     var startBtn: Button? = null
     var sample = false
     lateinit var fpsBtn: Button
-    lateinit var resultsBtn: Button
+    lateinit var editField: EditBox
+    lateinit var getBtn: Button
     lateinit var overlayBtn: BetterCheckbox
 
     val fpsText = TranslatableComponent("text.observable.profile_fps")
@@ -67,6 +75,32 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             }
             mc.setScreen(this)
         }, dest, true))
+    }
+
+    fun getData(url: String) {
+        getBtn.active = false
+        Thread {
+            var apiUrl = url
+            if (url.contains('#')) {
+                val hash = url.split('#').last()
+                apiUrl = "https://observable.tas.sh/api/get/${hash}"
+            }
+            Observable.LOGGER.info("GET $apiUrl")
+            try {
+                val request = URL(apiUrl)
+                    .openStream()
+                    .bufferedReader()
+                    .use { it.readText() }
+                Observable.RESULTS = Json.decodeFromString(request)
+                Overlay.loadSync()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                val errMsg = TextComponent("Error: ${e.message}")
+                GameInstance.getClient().player?.displayClientMessage(errMsg, true)
+            } finally {
+                getBtn.active = true
+            }
+        }.start()
     }
 
     override fun init() {
@@ -94,11 +128,23 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             sample = it
         })
 
-        resultsBtn = addRenderableWidget(Button(samplerBtn.x, samplerBtn.y + samplerBtn.height + 16,
-                fpsBtn.x + fpsBtn.width - samplerBtn.x, 20, TranslatableComponent("text.observable.results")) {
-//            Minecraft.getInstance().setScreen(ResultsScreen())
+        val longWidth = fpsBtn.x + fpsBtn.width - samplerBtn.x
+        val smallWidth = longWidth / 3 - 2
+
+        val editFieldDesc = TranslatableComponent("text.observable.get_field")
+        editField = addRenderableWidget(EditBox(GameInstance.getClient().font, samplerBtn.x, samplerBtn.y + samplerBtn.height + 16,
+            smallWidth * 2, 20, editFieldDesc))
+        editField.setSuggestion(editFieldDesc.string)
+        editField.setResponder {
+            editField.setSuggestion(if (it.isEmpty()) editFieldDesc.string else "")
+        }
+
+        getBtn = addRenderableWidget(Button(editField.x + editField.width + 8, editField.y, smallWidth, 20,
+            TranslatableComponent("text.observable.get_btn")) {
+            getData(editField.value)
         })
-        overlayBtn = addRenderableWidget(BetterCheckbox(resultsBtn.x, resultsBtn.y + resultsBtn.height + 4, resultsBtn.width,
+
+        overlayBtn = addRenderableWidget(BetterCheckbox(editField.x, editField.y + editField.height + 4, editField.width,
             20, TranslatableComponent("text.observable.overlay"), Overlay.enabled) {
             if (it) synchronized(Overlay) {
                 Overlay.load()
@@ -107,22 +153,21 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         })
 
         if (Observable.RESULTS == null) {
-            arrayOf(resultsBtn, overlayBtn).forEach {
+            arrayOf(editField, overlayBtn).forEach {
                 it.active = false
             }
         }
 
-        val width = resultsBtn.width / 3 - 2
         val learnBtn = addRenderableWidget(Button(startBtn.x, overlayBtn.y + overlayBtn.height + 8,
-            width, 20, TranslatableComponent("text.observable.docs")) {
+            smallWidth, 20, TranslatableComponent("text.observable.docs")) {
             openLink("https://github.com/tasgon/observable/wiki")
         })
         val helpBtn = addRenderableWidget(Button(learnBtn.x + learnBtn.width + 4, learnBtn.y,
-            width, 20, TranslatableComponent("text.observable.discord")) {
+            smallWidth, 20, TranslatableComponent("text.observable.discord")) {
             openLink("https://discord.gg/sfPbb3b5tF")
         })
         val donateBtn = addRenderableWidget(Button(helpBtn.x + helpBtn.width + 4, helpBtn.y,
-            width, 20, TranslatableComponent("text.observable.donate")) {
+            smallWidth, 20, TranslatableComponent("text.observable.donate")) {
             openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
         })
 

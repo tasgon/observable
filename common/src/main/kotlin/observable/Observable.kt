@@ -2,9 +2,11 @@ package observable
 
 import observable.server.ProfilingData
 import com.mojang.blaze3d.platform.InputConstants
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
+import com.mojang.brigadier.arguments.StringArgumentType.string
+import com.mojang.brigadier.arguments.IntegerArgumentType.integer
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.context.CommandContext
 import dev.architectury.event.events.common.CommandRegistrationEvent
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientPlayerEvent
@@ -29,13 +31,11 @@ import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
-import observable.server.ContinuousPerfEval
 import observable.server.Profiler
 import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import kotlin.system.exitProcess
 
 object Observable {
     const val MOD_ID = "observable"
@@ -65,36 +65,7 @@ object Observable {
         }
 
         CHANNEL.register { t: C2SPacket.RequestTeleport, supplier ->
-            val player = supplier.get().player
-            if (!hasPermission(player)) {
-                LOGGER.info("${player.name.contents} lacks permissions to teleport")
-                return@register
-            }
-            GameInstance.getServer()?.allLevels?.filter {
-                it.dimension().location().equals(t.level)
-            }?.get(0)?.let { level ->
-                LOGGER.info("Receive request from ${(player.name as TextComponent).text} in " +
-                        "${player.level.dimension().location()} to go to ${level.dimension().location()}")
-                Scheduler.SERVER.enqueue {
-                    if (player.level != level) with(player.position()) {
-                        (player as ServerPlayer).teleportTo(
-                            level, x, y, z,
-                            player.rotationVector.x, player.rotationVector.y
-                        )
-                    }
-                    t.pos?.apply {
-                        LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
-                        player.moveTo(x.toDouble(), y.toDouble(), z.toDouble())
-                    }
-                    t.entityId?.let {
-                        (level as Level).getEntity(it)?.position()?.apply {
-                            LOGGER.info("Moving to ($x, $y, $z) in ${t.level}")
-                            player.moveTo(this)
-                        } ?: player.displayClientMessage(
-                            TranslatableComponent("text.observable.entity_not_found", t.level.toString()), true)
-                    }
-                }
-            }
+            println("Using an in-game teleport command has been deprecated")
         }
 
         CHANNEL.register { t: C2SPacket.RequestAvailability, supplier ->
@@ -126,7 +97,7 @@ object Observable {
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
                 startBtn?.active = true
-                arrayOf(resultsBtn, overlayBtn).forEach { it.active = true }
+                arrayOf(editField, overlayBtn).forEach { it.active = true }
             }
             val data = t.data.entities
             LOGGER.info("Received profiling result with ${data.size} entries")
@@ -193,9 +164,54 @@ object Observable {
                             }))
                     }
                 })
+                .then(literal("tp").then(
+                    argument("dim", string())
+                        .then(literal("entity").then(
+                            argument("id", integer()).executes { ctx ->
+                                withDimMove(ctx) { player, level ->
+                                    val id = getInteger(ctx, "id")
+                                    level.getEntity(id)?.position()?.apply {
+                                        LOGGER.info("Moving to ($x, $y, $z) in ${level.toString()}")
+                                        player.moveTo(this)
+                                    } ?: player.displayClientMessage(
+                                        TranslatableComponent("text.observable.entity_not_found", level.toString()), true)
+                                }
+                                1
+                            }))
+                        .then(literal("position")
+                            .then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes { ctx ->
+                                    withDimMove(ctx) { player, _ ->
+                                        val (x, y, z) = listOf("x", "y", "z").map { getInteger(ctx, it).toDouble() }
+                                        player.moveTo(x, y, z)
+                                    }
+                                    1
+                                })))
+
+                    )
+                ))
 
             dispatcher.register(cmd)
 
+        }
+    }
+
+    fun withDimMove(ctx: CommandContext<CommandSourceStack>, block: (Player, Level) -> Unit) {
+        val player = ctx.source.playerOrException
+        val dim = getString(ctx, "dim")
+        val level = GameInstance.getServer()?.allLevels?.filter {
+            println(it.dimension().location())
+            it.dimension().location().toString() == dim
+        }?.get(0)!!
+
+        Scheduler.SERVER.enqueue {
+            if (player.level != level) with(player.position()) {
+                (player as ServerPlayer).teleportTo(
+                    level, x, y, z,
+                    player.rotationVector.x, player.rotationVector.y
+                )
+            }
+
+            block(player, level)
         }
     }
 

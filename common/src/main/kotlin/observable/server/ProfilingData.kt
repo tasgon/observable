@@ -40,8 +40,7 @@ fun getPosition(obj: Any?): BlockPos = when (obj) {
 data class ProfilingData(
     val entities: Map<ResourceLocation, List<Entry>>,
     val blocks: Map<ResourceLocation, List<Entry>>,
-    val traces: SerializedTraceMap?, val ticks: Int,
-    val diagnostics: JsonObject
+    val traces: SerializedTraceMap?, val ticks: Int
 ) {
     companion object {
         fun create(
@@ -62,21 +61,8 @@ data class ProfilingData(
                 }
             }.toMap()
 
-            val diagnostics = buildJsonObject {
-                put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
-                put("System Report", buildJsonArray {
-                    SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
-                })
-                put("Mods", buildJsonArray {
-                    Platform.getMods().forEach { mod ->
-                        add(JsonPrimitive("${mod.name} ${mod.version}"))
-                    }
-                })
-            }
-
             return ProfilingData(entityEntries, blockEntries,
-                traceMap?.let { SerializedTraceMap.create(it) }, ticks, diagnostics
-            )
+                traceMap?.let { SerializedTraceMap.create(it) }, ticks)
         }
     }
 
@@ -119,4 +105,19 @@ data class ProfilingData(
 
         val classMethod get() = "$className.$methodName"
     }
+}
+
+@Serializable
+data class DataWithDiagnostics(val data: ProfilingData, val diagnostics: JsonObject) {
+    constructor(data: ProfilingData) : this(data, buildJsonObject {
+        put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
+        put("System Report", buildJsonArray {
+            SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
+        })
+        put("Mods", buildJsonArray {
+            Platform.getMods().forEach { mod ->
+                add(JsonPrimitive("${mod.name} ${mod.version}"))
+            }
+        })
+    })
 }

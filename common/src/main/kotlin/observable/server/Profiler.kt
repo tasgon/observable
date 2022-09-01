@@ -3,9 +3,15 @@ package observable.server
 import observable.server.ProfilingData
 import dev.architectury.networking.NetworkManager
 import dev.architectury.utils.GameInstance
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import net.minecraft.ChatFormatting
+import net.minecraft.Util
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
+import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.TextComponent
+import net.minecraft.network.chat.TranslatableComponent
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
@@ -17,7 +23,13 @@ import net.minecraft.world.level.material.FluidState
 import observable.Observable
 import observable.Props
 import observable.net.S2CPacket
+import java.io.BufferedReader
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.*
+import java.util.zip.GZIPOutputStream
 import kotlin.concurrent.schedule
 import kotlin.random.Random
 
@@ -103,6 +115,27 @@ class Profiler {
         }
     }
 
+    fun uploadProfile(data: ProfilingData) {
+        Observable.LOGGER.info("Attempting to upload profile")
+        val serialized = Json.encodeToString(DataWithDiagnostics(data))
+        try {
+            val conn = URL("http://localhost:8082/add").openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+
+            GZIPOutputStream(conn.outputStream).bufferedWriter(Charsets.UTF_8).use { it.write(serialized) }
+
+            val profileURL = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val link = TextComponent(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
+                it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
+            }
+            player?.sendMessage(TranslatableComponent("text.observable.profile_uploaded", link), Util.NIL_UUID)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            player?.sendMessage(TranslatableComponent("text.observable.upload_failed"), Util.NIL_UUID)
+        }
+    }
+
     fun stopRunning() {
         val ticks: Int
         synchronized(Props.notProcessing) {
@@ -115,6 +148,7 @@ class Profiler {
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
         Observable.LOGGER.info("Sending to ${players.map { (it.name as TextComponent).text }}")
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))
+        uploadProfile(data)
         Observable.LOGGER.info("Data transfer complete!")
         GameInstance.getServer()?.playerList?.players?.filter { Observable.hasPermission(it) }?.let {
             Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive)
