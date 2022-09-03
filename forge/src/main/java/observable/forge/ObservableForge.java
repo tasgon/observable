@@ -16,12 +16,6 @@ import java.util.Objects;
 @Mod(Observable.MOD_ID)
 public class ObservableForge {
     public ObservableForge() {
-        var patchLoader = System.getenv("O_PATCH_LOADER");
-        if (Objects.equals(patchLoader, "true")) {
-            var loader = ((ModuleClassLoader)this.getClass().getClassLoader());
-            loader.setFallbackClassLoader(new HackyLoader());
-        }
-
         Remapper.modLoader = ModLoader.FORGE;
         // Submit our event bus to let architectury register our content on the right time
         EventBuses.registerModEventBus(Observable.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
@@ -33,23 +27,5 @@ public class ObservableForge {
     public void onClientInit(FMLClientSetupEvent ev) {
         Observable.clientInit();
         MinecraftForge.EVENT_BUS.register(ForgeClientHooks.INSTANCE);
-    }
-
-    // Until McModLauncher/modlauncher#78 gets dealt with, we have to
-    // monkey patch our own classloader to make things work in dev
-    public static class HackyLoader extends ClassLoader {
-        @Override
-        public Class<?> loadClass(String name) throws ClassNotFoundException {
-            // Try them all till one of them works
-            try {
-                try {
-                    return ClassLoader.getPlatformClassLoader().loadClass(name);
-                } catch (Throwable e) {
-                    return com.google.gson.Gson.class.getClassLoader().loadClass(name);
-                }
-            } catch (Throwable e) {
-                return ClassLoader.getSystemClassLoader().loadClass(name);
-            }
-        }
     }
 }
