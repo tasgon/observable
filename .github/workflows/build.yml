@@ -1,0 +1,33 @@
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup jdk
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: temurin
+          cache: gradle
+      - name: gradle setup
+        uses: gradle/gradle-build-action@v2
+      - name: gradle build
+        run: ./gradlew build --no-daemon
+      - name: set params
+        run: |
+          cat $GITHUB_WORKSPACE/gradle.properties | grep ^archives_base_name= >> $GITHUB_ENV
+          cat $GITHUB_WORKSPACE/gradle.properties | grep ^minecraft_version= >> $GITHUB_ENV
+          cat $GITHUB_WORKSPACE/gradle.properties | grep ^base_version= >> $GITHUB_ENV
+      - name: set package name
+        run: echo "pkg_file=$archives_base_name-$base_version.jar" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v3
+        with:
+          name: observable-${{env.base_version}-${{minecraft_version}}.${{github.run_number}}
+          path: |
+            **/build/libs/*.jar
+            **/build/libs/*.jar
+            !**/*-dev.jar
+            !**/*-shadow.jar
+            !**/*-transformProduction*.jar

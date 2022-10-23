@@ -5,7 +5,6 @@ import dev.architectury.utils.GameInstance
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.minecraft.ChatFormatting
-import net.minecraft.Util
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.network.chat.*
