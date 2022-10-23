@@ -19,12 +19,12 @@ jobs:
         run: |
           cat $GITHUB_WORKSPACE/gradle.properties | grep ^archives_base_name= >> $GITHUB_ENV
           cat $GITHUB_WORKSPACE/gradle.properties | grep ^minecraft_version= >> $GITHUB_ENV
-          cat $GITHUB_WORKSPACE/gradle.properties | grep ^base_version= >> $GITHUB_ENV
+          cat $GITHUB_WORKSPACE/gradle.properties | grep ^mod_version= >> $GITHUB_ENV
       - name: set package name
-        run: echo "pkg_file=$archives_base_name-$base_version.jar" >> $GITHUB_ENV
+        run: echo "pkg_file=$archives_base_name-$mod_version.jar" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v3
         with:
-          name: observable-${{env.base_version}}-${{env.minecraft_version}}.${{github.run_number}}
+          name: observable-${{env.mod_version}}-${{env.minecraft_version}}.${{github.run_number}}
           path: |
             **/build/libs/*.jar
             **/build/libs/*.jar
