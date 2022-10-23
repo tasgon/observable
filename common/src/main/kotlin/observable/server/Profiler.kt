@@ -8,8 +8,7 @@ import net.minecraft.ChatFormatting
 import net.minecraft.Util
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
-import net.minecraft.network.chat.ClickEvent
-import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.*
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
@@ -135,10 +134,10 @@ class Profiler {
             val link = Component.literal(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
                 it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
             }
-            player?.sendMessage(TranslatableComponent("text.observable.profile_uploaded", link), Util.NIL_UUID)
+            player?.sendSystemMessage(Component.translatable("text.observable.profile_uploaded", link))
         } catch (e: Exception) {
             e.printStackTrace()
-            player?.sendMessage(TranslatableComponent("text.observable.upload_failed"), Util.NIL_UUID)
+            player?.sendSystemMessage(Component.translatable("text.observable.upload_failed"))
         }
     }
 

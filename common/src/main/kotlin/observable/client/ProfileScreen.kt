@@ -102,7 +102,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 Overlay.loadSync()
             } catch (e: Exception) {
                 Observable.LOGGER.error("Profile download error", e)
-                val errMsg = TextComponent("Error: ${e.message}")
+                val errMsg = Component.literal("Error: ${e.message}")
                 GameInstance.getClient().player?.displayClientMessage(errMsg, true)
             } finally {
                 getBtn.active = true
@@ -158,7 +158,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         val longWidth = fpsBtn.x + fpsBtn.width - samplerBtn.x
         val smallWidth = longWidth / 3 - 2
 
-        val editFieldDesc = TranslatableComponent("text.observable.get_field")
+        val editFieldDesc = Component.translatable("text.observable.get_field")
         editField = addRenderableWidget(
             EditBox(
                 GameInstance.getClient().font,

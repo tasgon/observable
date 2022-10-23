@@ -153,7 +153,7 @@ object Observable {
             LOGGER.info("Registered thread ${thread.name}")
         }
 
-        CommandRegistrationEvent.EVENT.register { dispatcher, dedicated ->
+        CommandRegistrationEvent.EVENT.register { dispatcher, ctx, selection ->
             val cmd = literal("observable")
                 .requires { it.hasPermission(4) }
                 .executes {
