@@ -3,10 +3,7 @@
   "minVersion": "0.8",
   "package": "observable.mixin",
   "compatibilityLevel": "JAVA_8",
-  "mixins": [
-    "LevelMixin",
-    "ServerLevelMixin"
-  ],
+  "mixins": ["LevelMixin", "ServerLevelMixin"],
   "client": [],
   "server": [],
   "injectors": {

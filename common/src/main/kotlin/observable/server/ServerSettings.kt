@@ -1,7 +1,7 @@
 package observable.server
 
-import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.arguments.BoolArgumentType.bool
+import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import kotlinx.serialization.Serializable
 
 val ServerSettings = ServerSettingsData()

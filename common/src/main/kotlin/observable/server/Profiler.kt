@@ -126,7 +126,7 @@ class Profiler {
         Observable.LOGGER.info("Attempting to upload profile")
         val serialized = Json.encodeToString(DataWithDiagnostics(data))
         try {
-            val conn = URL("http://localhost:8082/add").openConnection() as HttpURLConnection
+            val conn = URL("https://observable.tas.sh/add").openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
 

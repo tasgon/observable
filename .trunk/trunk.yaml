@@ -1,6 +1,6 @@
 version: 0.1
 cli:
-  version: 0.17.0-beta
+  version: 1.0.1
 plugins:
   sources:
     - id: trunk
@@ -16,3 +16,11 @@ lint:
     - shfmt@3.5.0
     - taplo@release-taplo-cli-0.6.8
     - ktlint@0.47.0
+actions:
+  enabled:
+    - trunk-upgrade-available
+runtimes:
+  enabled:
+    - go@1.18.3
+    - java@11.0.13
+    - node@16.14.2
