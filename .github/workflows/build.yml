@@ -24,7 +24,7 @@ jobs:
         run: echo "pkg_file=$archives_base_name-$base_version.jar" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v3
         with:
-          name: observable-${{env.base_version}-${{minecraft_version}}.${{github.run_number}}
+          name: observable-${{env.base_version}}-${{env.minecraft_version}}.${{github.run_number}}
           path: |
             **/build/libs/*.jar
             **/build/libs/*.jar
