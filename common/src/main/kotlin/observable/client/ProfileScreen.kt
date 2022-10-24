@@ -15,8 +15,10 @@ import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
 import observable.net.C2SPacket
+import observable.server.DataWithDiagnostics
 import java.io.File
 import java.net.URL
+import java.util.zip.GZIPInputStream
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile")) {
@@ -88,18 +90,19 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             var apiUrl = url
             if (url.contains('#')) {
                 val hash = url.split('#').last()
-                apiUrl = "https://observable.tas.sh/api/get/$hash"
+                apiUrl = "https://observable.tas.sh/get/$hash"
             }
             Observable.LOGGER.info("GET $apiUrl")
             try {
                 val request = URL(apiUrl)
                     .openStream()
+                    .let { GZIPInputStream(it) }
                     .bufferedReader()
                     .use { it.readText() }
-                Observable.RESULTS = Json.decodeFromString(request)
+                Observable.RESULTS = Json.decodeFromString<DataWithDiagnostics>(request).data
                 Overlay.loadSync()
             } catch (e: Exception) {
-                e.printStackTrace()
+                Observable.LOGGER.error("Profile download error", e)
                 val errMsg = TextComponent("Error: ${e.message}")
                 GameInstance.getClient().player?.displayClientMessage(errMsg, true)
             } finally {
