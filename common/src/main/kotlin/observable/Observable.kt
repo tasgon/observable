@@ -62,7 +62,7 @@ object Observable {
 
     fun hasPermission(player: Player): Boolean {
         if (ServerSettings.allPlayersAllowed) return true
-        if (ServerSettings.allowedPlayers.contains(player.id.toString())) return true
+        if (ServerSettings.allowedPlayers.contains(player.gameProfile.id.toString())) return true
         if (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) != false) return true
         return GameInstance.getServer()?.isSingleplayer ?: false
     }
@@ -76,7 +76,7 @@ object Observable {
                 return@register
             }
             if (PROFILER.notProcessing) {
-                PROFILER.runWithDuration(t.duration, t.sample) { result ->
+                PROFILER.runWithDuration(player as? ServerPlayer, t.duration, t.sample) { result ->
                     player.sendMessage(result, Util.NIL_UUID)
                 }
             }
@@ -178,7 +178,7 @@ object Observable {
                     literal("run").then(
                         argument("duration", integer()).executes { ctx ->
                             val duration = getInteger(ctx, "duration")
-                            PROFILER.runWithDuration(duration, false) { result ->
+                            PROFILER.runWithDuration(ctx.source.entity as? ServerPlayer, duration, false) { result ->
                                 ctx.source.sendSuccess(result, false)
                             }
                             ctx.source.sendSuccess(TranslatableComponent("text.observable.profile_started", duration), false)
@@ -191,6 +191,9 @@ object Observable {
                         argument("player", gameProfile()).executes { ctx ->
                             getGameProfiles(ctx, "player").forEach { player ->
                                 ServerSettings.allowedPlayers.add(player.id.toString())
+                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
+                                }
                             }
                             ServerSettings.sync()
                             1
@@ -202,6 +205,9 @@ object Observable {
                         argument("player", gameProfile()).executes { ctx ->
                             getGameProfiles(ctx, "player").forEach { player ->
                                 ServerSettings.allowedPlayers.remove(player.id.toString())
+                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
+                                }
                             }
                             ServerSettings.sync()
                             1

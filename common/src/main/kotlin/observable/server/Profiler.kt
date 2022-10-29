@@ -111,8 +111,8 @@ class Profiler {
         }
     }
 
-    fun runWithDuration(duration: Int, sample: Boolean, onComplete: (Component) -> Unit) {
-        this.player = player as? ServerPlayer
+    fun runWithDuration(player: ServerPlayer?, duration: Int, sample: Boolean, onComplete: (Component) -> Unit) {
+        this.player = player
         startRunning(sample)
         val durMs = duration.toLong() * 1000L
         Observable.CHANNEL.sendToPlayers(
@@ -137,6 +137,7 @@ class Profiler {
             GZIPOutputStream(conn.outputStream).bufferedWriter(Charsets.UTF_8).use { it.write(serialized) }
 
             val profileURL = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            Observable.LOGGER.info("Profile uploaded to $profileURL")
             val link = TextComponent(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
                 it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
             }
@@ -155,7 +156,7 @@ class Profiler {
             notProcessing = true
             ticks = GameInstance.getServer()!!.tickCount - startingTicks
         }
-        val players = player?.let { listOf(it) } ?: GameInstance.getServer()!!.playerList.players
+        val players = player?.let { listOf(it) } ?: listOf()
         Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
         val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, serverTraceMap)
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
