@@ -7,21 +7,15 @@
 
 package observable.server
 
-import dev.architectury.platform.Platform
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import net.minecraft.SystemReport
+import kotlinx.serialization.json.*
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
-import observable.Observable
 import observable.net.*
 
 fun getPosition(obj: Any?): BlockPos = when (obj) {
@@ -123,25 +117,4 @@ data class ProfilingData(
 }
 
 @Serializable
-data class DataWithDiagnostics(val data: ProfilingData, val diagnostics: JsonObject) {
-    constructor(data: ProfilingData) : this(
-        data,
-        buildJsonObject {
-            put("Observable Version", JsonPrimitive(Platform.getMod(Observable.MOD_ID).version))
-            put(
-                "System Report",
-                buildJsonArray {
-                    SystemReport().toLineSeparatedString().split(System.lineSeparator()).forEach { add(JsonPrimitive(it)) }
-                }
-            )
-            put(
-                "Mods",
-                buildJsonArray {
-                    Platform.getMods().forEach { mod ->
-                        add(JsonPrimitive("${mod.name} ${mod.version}"))
-                    }
-                }
-            )
-        }
-    )
-}
+data class DataWithDiagnostics(val data: ProfilingData, val diagnostics: JsonObject)

@@ -18,6 +18,7 @@
   "text.observable.docs": "Wiki",
   "text.observable.discord": "Discord",
   "text.observable.donate": "Donate",
+  "text.observable.profile_started": "Started profile for %d",
   "text.observable.profile_uploaded": "Profile uploaded to %s",
   "text.observable.upload_failed": "Profile could not be uploaded",
   "text.observable.profile_saved": "Profile saved locally to %s",

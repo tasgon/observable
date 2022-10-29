@@ -38,6 +38,10 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             }
     }
 
+    init {
+        this.init()
+    }
+
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
