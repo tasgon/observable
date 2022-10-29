@@ -4,18 +4,19 @@ cli:
 plugins:
   sources:
     - id: trunk
-      ref: v0.0.3
+      ref: v0.0.5
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
+    - actionlint@1.6.21
     - git-diff-check@SYSTEM
-    - gitleaks@8.11.2
+    - gitleaks@8.15.0
     - markdownlint@0.32.2
     - prettier@2.7.1
     - shellcheck@0.8.0
     - shfmt@3.5.0
-    - taplo@release-taplo-cli-0.6.8
-    - ktlint@0.47.0
+    - taplo@release-taplo-cli-0.7.0
+    - ktlint@0.47.1
   ignore:
     - linters: [ALL]
       paths:

@@ -3,8 +3,6 @@ package observable
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
-import com.mojang.brigadier.arguments.StringArgumentType.getString
-import com.mojang.brigadier.arguments.StringArgumentType.string
 import com.mojang.brigadier.context.CommandContext
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientPlayerEvent
@@ -18,6 +16,12 @@ import net.minecraft.client.KeyMapping
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands.argument
 import net.minecraft.commands.Commands.literal
+import net.minecraft.commands.arguments.DimensionArgument.dimension
+import net.minecraft.commands.arguments.DimensionArgument.getDimension
+import net.minecraft.commands.arguments.GameProfileArgument.gameProfile
+import net.minecraft.commands.arguments.GameProfileArgument.getGameProfiles
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument.getLoadedBlockPos
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
@@ -54,9 +58,12 @@ object Observable {
     var RESULTS: ProfilingData? = null
     val PROFILE_SCREEN by lazy { ProfileScreen() }
 
-    fun hasPermission(player: Player) =
-        (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) ?: true) ||
-            (GameInstance.getServer()?.isSingleplayer ?: false)
+    fun hasPermission(player: Player): Boolean {
+        if (ServerSettings.allPlayersAllowed) return true
+        if (ServerSettings.allowedPlayers.contains(player.gameProfile.id.toString())) return true
+        if (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) != false) return true
+        return GameInstance.getServer()?.isSingleplayer ?: false
+    }
 
     @JvmStatic
     fun init() {
@@ -66,7 +73,12 @@ object Observable {
                 LOGGER.info("${player.name.contents} lacks permissions to start profiling")
                 return@register
             }
-            if (PROFILER.notProcessing) PROFILER.startRunning(t.duration, t.sample, supplier.get())
+            if (PROFILER.notProcessing) {
+                PROFILER.runWithDuration(player as? ServerPlayer, t.duration, t.sample) { result ->
+                    player.sendSystemMessage(result)
+                }
+            }
+            LOGGER.info("${player.gameProfile.name} started profiler for ${t.duration} s")
         }
 
         CHANNEL.register { t: C2SPacket.RequestTeleport, supplier ->
@@ -161,6 +173,46 @@ object Observable {
                     1
                 }
                 .then(
+                    literal("run").then(
+                        argument("duration", integer()).executes { ctx ->
+                            val duration = getInteger(ctx, "duration")
+                            PROFILER.runWithDuration(ctx.source.player, duration, false) { result ->
+                                ctx.source.sendSuccess(result, false)
+                            }
+                            ctx.source.sendSuccess(Component.translatable("text.observable.profile_started", duration), false)
+                            1
+                        }
+                    )
+                )
+                .then(
+                    literal("allow").then(
+                        argument("player", gameProfile()).executes { ctx ->
+                            getGameProfiles(ctx, "player").forEach { player ->
+                                ServerSettings.allowedPlayers.add(player.id.toString())
+                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
+                                }
+                            }
+                            ServerSettings.sync()
+                            1
+                        }
+                    )
+                )
+                .then(
+                    literal("deny").then(
+                        argument("player", gameProfile()).executes { ctx ->
+                            getGameProfiles(ctx, "player").forEach { player ->
+                                ServerSettings.allowedPlayers.remove(player.id.toString())
+                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
+                                }
+                            }
+                            ServerSettings.sync()
+                            1
+                        }
+                    )
+                )
+                .then(
                     literal("set").let {
                         ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
                             val argType = TypeMap[field.type] ?: return@fold setCmd
@@ -171,6 +223,7 @@ object Observable {
                                             try {
                                                 field.isAccessible = true
                                                 field.set(ServerSettings, ctx.getArgument("newVal", field.type))
+                                                ServerSettings.sync()
                                                 1
                                             } catch (e: Exception) {
                                                 e.printStackTrace()
@@ -185,7 +238,7 @@ object Observable {
                 )
                 .then(
                     literal("tp").then(
-                        argument("dim", string())
+                        argument("dim", dimension())
                             .then(
                                 literal("entity").then(
                                     argument("id", integer()).executes { ctx ->
@@ -206,17 +259,13 @@ object Observable {
                             .then(
                                 literal("position")
                                     .then(
-                                        argument("x", integer()).then(
-                                            argument("y", integer()).then(
-                                                argument("z", integer()).executes { ctx ->
-                                                    withDimMove(ctx) { player, _ ->
-                                                        val (x, y, z) = listOf("x", "y", "z").map { getInteger(ctx, it).toDouble() }
-                                                        player.moveTo(x, y, z)
-                                                    }
-                                                    1
-                                                }
-                                            )
-                                        )
+                                        argument("pos", blockPos()).executes { ctx ->
+                                            withDimMove(ctx) { player, _ ->
+                                                val pos = getLoadedBlockPos(ctx, "pos")
+                                                player.moveTo(pos, 0F, 0F)
+                                            }
+                                            1
+                                        }
                                     )
 
                             )
@@ -229,11 +278,7 @@ object Observable {
 
     fun withDimMove(ctx: CommandContext<CommandSourceStack>, block: (Player, Level) -> Unit) {
         val player = ctx.source.playerOrException
-        val dim = getString(ctx, "dim")
-        val level = GameInstance.getServer()?.allLevels?.filter {
-            println(it.dimension().location())
-            it.dimension().location().toString() == dim
-        }?.get(0)!!
+        val level = getDimension(ctx, "dim")
 
         Scheduler.SERVER.enqueue {
             if (player.level != level) {
