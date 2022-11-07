@@ -1,6 +1,7 @@
 plugins {
     id "com.github.johnrengelman.shadow" version "7.1.1"
     id 'org.jetbrains.kotlin.jvm'
+    id "me.shedaniel.unified-publishing"
 }
 
 architectury {

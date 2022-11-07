@@ -1,6 +1,7 @@
 plugins {
     id "com.github.johnrengelman.shadow" version "7.1.1"
     id 'org.jetbrains.kotlin.jvm'
+    id "me.shedaniel.unified-publishing"
 }
 
 architectury {
@@ -111,6 +112,8 @@ unifiedPublishing {
                 id = rootProject.curseforge_id
                 gameVersions.addAll "Java 17", "1.19-Snapshot"
             }
+        } else {
+            println "CF key missing"
         }
 
         var MODRINTH_TOKEN = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN")
