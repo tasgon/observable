@@ -97,6 +97,42 @@ components.java {
     }
 }
 
+// Credit to shedaniel (architectury) for most of this
+unifiedPublishing {
+    project {
+        displayName = "$project.version (forge)"
+        releaseType = "$rootProject.release_channel"
+        changelog = "See Observable's GitHub releases page for all changes between versions."
+        gameVersions = ["1.19.2"]
+        gameLoaders = ["forge"]
+        mainPublication remapJar
+        relations {
+            depends {
+                curseforge = "architectury-api"
+                modrinth = "architectury-api"
+            }
+        }
+
+        var CURSE_API_KEY = project.findProperty("CURSE_API_KEY") ?: System.getenv("CURSE_API_KEY")
+        if (CURSE_API_KEY != null) {
+            curseforge {
+                token = CURSE_API_KEY
+                id = rootProject.curseforge_id
+                gameVersions.addAll "Java 17", "1.19-Snapshot"
+            }
+        }
+
+        var MODRINTH_TOKEN = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN")
+        if (MODRINTH_TOKEN != null) {
+            modrinth {
+                token = MODRINTH_TOKEN
+                id = rootProject.modrinth_id
+                version = "$project.version+$project.name"
+            }
+        }
+    }
+}
+
 publishing {
     publications {
         mavenForge(MavenPublication) {
