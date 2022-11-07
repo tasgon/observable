@@ -130,7 +130,7 @@ class Profiler {
         val serialized = Json.encodeToString(DataWithDiagnostics(data, diagnostics))
 
         return try {
-            val conn = URL("https://observable.tas.sh/add").openConnection() as HttpURLConnection
+            val conn = URL("https://observable.tas.sh/v1/add").openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
 

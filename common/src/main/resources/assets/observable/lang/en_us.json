@@ -18,10 +18,15 @@
   "text.observable.docs": "Wiki",
   "text.observable.discord": "Discord",
   "text.observable.donate": "Donate",
-  "text.observable.profile_started": "Started profile for %d",
+  "text.observable.profile_started": "Started profile for %d seconds",
   "text.observable.profile_uploaded": "Profile uploaded to %s",
   "text.observable.upload_failed": "Profile could not be uploaded",
   "text.observable.profile_saved": "Profile saved locally to %s",
   "text.observable.suggest": "It seems your server is running a little slow (%s tps). %s to find lag sources.",
-  "text.observable.suggest_action": "Consider using Observable"
+  "text.observable.suggest_action": "Consider using Observable",
+  "screen.observable.client_settings": "Settings",
+  "text.observable.maxBlockDist": "Max block label distance (blocks):",
+  "text.observable.maxEntityDist": "Max entity label distance (blocks):",
+  "text.observable.normalize": "Normalize results:",
+  "text.observable.maxEntityCount": "Max # of entities:"
 }

@@ -142,7 +142,7 @@ object Overlay {
         val norm = ClientSettings.normalized
         entities = data.entities[levelLocation]?.map {
             Entry.EntityEntry(it.entityId!!, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
-        }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
+        }.orEmpty().filter { it.rate >= ClientSettings.minRate }.sortedByDescending { it.rate }
 
         blocks = data.blocks[levelLocation]?.map {
             Entry.BlockEntry(it.position, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
@@ -190,10 +190,11 @@ object Overlay {
                     }
                 }
             }
-            if (entities.size < ClientSettings.maxEntityCount) {
-                for (entry in entities) {
-                    drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
-                }
+
+            val maxEntityIndex = ClientSettings.maxEntityCount - 1
+            for ((i, entry) in entities.withIndex()) {
+                if (i > maxEntityIndex) break
+                drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
             vertexBuf?.let {

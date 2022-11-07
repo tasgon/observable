@@ -73,9 +73,6 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
     lateinit var getBtn: Button
     lateinit var overlayBtn: BetterCheckbox
 
-    val fpsText = TranslatableComponent("text.observable.profile_fps")
-    val unimplementedText = TranslatableComponent("text.observable.unimplemented")
-
     fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
         mc.setScreen(
@@ -133,7 +130,6 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             }
         )
         startBtn.active = action is Action.NewProfile
-
         startBtn.x = width / 2 - startBtn.width - 4
 
         fpsBtn = addRenderableWidget(
@@ -142,10 +138,11 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
                 startBtn.y,
                 startBtn.width,
                 startBtn.height,
-                fpsText
-            ) { }
+                TranslatableComponent("screen.observable.client_settings")
+            ) {
+                GameInstance.getClient().setScreen(ClientSettingsGui())
+            }
         ) as Button
-        fpsBtn.active = false
 
         val samplerBtn = addRenderableWidget(
             BetterCheckbox(
@@ -279,11 +276,5 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         }
 
         return super.mouseScrolled(d, e, f)
-    }
-
-    override fun mouseMoved(d: Double, e: Double) {
-        fpsBtn.message = if (fpsBtn.isHoveredOrFocused) unimplementedText else fpsText
-
-        super.mouseMoved(d, e)
     }
 }

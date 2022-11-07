@@ -20,9 +20,12 @@ fun Profiler.getDiagnostics(): JsonObject {
             "additionalDiagnostics",
             buildJsonObject {
                 put("System Report", SystemReport().toLineSeparatedString())
-                put("Mods", Platform.getMods().joinToString("\n") { mod ->
-                    "'${mod.name}' (version: ${mod.version})"
-                })
+                put(
+                    "Mods",
+                    Platform.getMods().joinToString("\n") { mod ->
+                        "'${mod.name}' (version: ${mod.version})"
+                    }
+                )
             }
         )
     }
