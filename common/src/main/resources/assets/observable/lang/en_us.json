@@ -11,7 +11,7 @@
   "text.observable.no_permissions": "You don't have permissions to start a profiler",
   "text.observable.error": "Error performing action: %s",
   "text.observable.report": "Please report this at github.com/tasgon/observable/issues",
-  "text.observable.entity_not_found": "Entity not found in %s. Perhaps it died or was otherwise removed?",
+  "text.observable.entity_not_found": "Entity not found. Perhaps it died or was otherwise removed?",
   "text.observable.get_field": "Enter profile URL/hash...",
   "text.observable.get_btn": "Get!",
   "text.observable.overlay": "Overlay",
@@ -23,5 +23,10 @@
   "text.observable.upload_failed": "Profile could not be uploaded",
   "text.observable.profile_saved": "Profile saved locally to %s",
   "text.observable.suggest": "It seems your server is running a little slow (%s tps). %s to find lag sources.",
-  "text.observable.suggest_action": "Consider using Observable"
+  "text.observable.suggest_action": "Consider using Observable",
+  "screen.observable.client_settings": "Settings",
+  "text.observable.maxBlockDist": "Max block label distance (blocks):",
+  "text.observable.maxEntityDist": "Max entity label distance (blocks):",
+  "text.observable.normalize": "Normalize results:",
+  "text.observable.maxEntityCount": "Max # of entities:"
 }

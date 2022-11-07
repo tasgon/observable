@@ -20,14 +20,16 @@ import net.minecraft.commands.arguments.DimensionArgument.dimension
 import net.minecraft.commands.arguments.DimensionArgument.getDimension
 import net.minecraft.commands.arguments.GameProfileArgument.gameProfile
 import net.minecraft.commands.arguments.GameProfileArgument.getGameProfiles
-import net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos
-import net.minecraft.commands.arguments.coordinates.BlockPosArgument.getLoadedBlockPos
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument.*
+import net.minecraft.commands.arguments.coordinates.Vec3Argument.getVec3
+import net.minecraft.commands.arguments.coordinates.Vec3Argument.vec3
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
+import net.minecraft.world.phys.Vec3
 import observable.client.Overlay
 import observable.client.ProfileScreen
 import observable.net.BetterChannel
@@ -39,6 +41,7 @@ import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
+import java.util.*
 
 object Observable {
     const val MOD_ID = "observable"
@@ -242,16 +245,15 @@ object Observable {
                             .then(
                                 literal("entity").then(
                                     argument("id", integer()).executes { ctx ->
-                                        withDimMove(ctx) { player, level ->
-                                            val id = getInteger(ctx, "id")
-                                            level.getEntity(id)?.position()?.apply {
-                                                LOGGER.info("Moving to ($x, $y, $z) in $level")
-                                                player.moveTo(this)
-                                            } ?: player.displayClientMessage(
-                                                Component.translatable("text.observable.entity_not_found", level.toString()),
-                                                true
+                                        val level = getDimension(ctx, "dim")
+                                        val id = getInteger(ctx, "id")
+                                        val pos = level.getEntity(id)?.position() ?: run {
+                                            ctx.source.sendFailure(
+                                                Component.translatable("text.observable.entity_not_found")
                                             )
+                                            return@executes 0
                                         }
+                                        teleport(ctx, pos)
                                         1
                                     }
                                 )
@@ -259,11 +261,8 @@ object Observable {
                             .then(
                                 literal("position")
                                     .then(
-                                        argument("pos", blockPos()).executes { ctx ->
-                                            withDimMove(ctx) { player, _ ->
-                                                val pos = getLoadedBlockPos(ctx, "pos")
-                                                player.moveTo(pos, 0F, 0F)
-                                            }
+                                        argument("pos", vec3()).executes { ctx ->
+                                            teleport(ctx, getVec3(ctx, "pos"))
                                             1
                                         }
                                     )
@@ -276,26 +275,17 @@ object Observable {
         }
     }
 
-    fun withDimMove(ctx: CommandContext<CommandSourceStack>, block: (Player, Level) -> Unit) {
+    fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
         val player = ctx.source.playerOrException
         val level = getDimension(ctx, "dim")
 
-        Scheduler.SERVER.enqueue {
-            if (player.level != level) {
-                with(player.position()) {
-                    (player as ServerPlayer).teleportTo(
-                        level,
-                        x,
-                        y,
-                        z,
-                        player.rotationVector.x,
-                        player.rotationVector.y
-                    )
-                }
-            }
-
-            block(player, level)
+        player.teleportTo(pos.x, pos.y, pos.z)
+        if (level == player.level) {
+            player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
+        } else {
+            player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)
         }
+        LOGGER.info("Moved ${player.gameProfile.name} to (${pos.x}, ${pos.y}, ${pos.z}) in $level")
     }
 
     @JvmStatic

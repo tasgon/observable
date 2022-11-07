@@ -132,7 +132,6 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             }
         )
         startBtn.active = action is Action.NewProfile
-
         startBtn.x = width / 2 - startBtn.width - 4
 
         fpsBtn = addRenderableWidget(
@@ -141,10 +140,11 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 startBtn.y,
                 startBtn.width,
                 startBtn.height,
-                fpsText
-            ) { }
+                Component.translatable("screen.observable.client_settings")
+            ) {
+                GameInstance.getClient().setScreen(ClientSettingsGui())
+            }
         ) as Button
-        fpsBtn.active = false
 
         val samplerBtn = addRenderableWidget(
             BetterCheckbox(
@@ -278,11 +278,5 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         }
 
         return super.mouseScrolled(d, e, f)
-    }
-
-    override fun mouseMoved(d: Double, e: Double) {
-        fpsBtn.message = if (fpsBtn.isHoveredOrFocused) unimplementedText else fpsText
-
-        super.mouseMoved(d, e)
     }
 }
