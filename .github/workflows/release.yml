@@ -5,8 +5,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-        with:
-          ref: "${{ github.event.inputs.branch }"
       - name: setup jdk
         uses: actions/setup-java@v3
         with:
@@ -34,6 +32,6 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/${{mod_version}}',
+              ref: 'refs/tags/${{ env.mod_version }}',
               sha: context.sha
             })
