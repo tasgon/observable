@@ -22,36 +22,6 @@ import java.util.function.Consumer;
 
 @Mixin(Level.class)
 public class LevelMixin {
-    /**
-     * @reason This is an overwrite to insert the monitoring code.
-     * @author .
-     */
-    @Overwrite
-    public <T extends Entity> void guardEntityTick(Consumer<T> consumer, T entity) {
-        try {
-            if (Props.notProcessing) consumer.accept(entity);
-            else {
-                if (Props.entityDepth < 0) Props.entityDepth = Thread.currentThread().getStackTrace().length - 1;
-                if ((Object)this instanceof ServerLevel) {
-                    Profiler.TimingData data = Observable.INSTANCE.getPROFILER().process(entity);
-                    Props.currentTarget.set(data);
-                    long start = System.nanoTime();
-                    consumer.accept(entity);
-                    data.setTime(System.nanoTime() - start + data.getTime());
-                    Props.currentTarget.set(null);
-                    data.setTicks(data.getTicks() + 1);
-                } else {
-                    consumer.accept(entity);
-                }
-            }
-        } catch (Throwable throwable) {
-            CrashReport crashReport = CrashReport.forThrowable(throwable, "Ticking entity");
-            CrashReportCategory crashReportCategory = crashReport.addCategory("Entity being ticked");
-            entity.fillCrashReportCategory(crashReportCategory);
-            throw new ReportedException(crashReport);
-        }
-    }
-
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
     public final void redirectTick(TickingBlockEntity blockEntity) {
