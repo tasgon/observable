@@ -2,7 +2,7 @@
     EntitySerializer::class,
     ResourceLocationSerializer::class,
     BlockEntitySerializer::class,
-    BlockPosSerializer::class
+    BlockPosSerializer::class,
 )
 
 package observable.server
@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.*
 import net.minecraft.core.BlockPos
-import net.minecraft.core.Registry
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.Entity
@@ -29,19 +29,19 @@ data class ProfilingData(
     val entities: Map<ResourceLocation, List<Entry>>,
     val blocks: Map<ResourceLocation, List<Entry>>,
     val traces: SerializedTraceMap?,
-    val ticks: Int
+    val ticks: Int,
 ) {
     companion object {
         fun create(
             entities: Map<Entity, Profiler.TimingData>,
             blocks: Map<ResourceKey<Level>, Map<BlockPos, Profiler.TimingData>>,
             ticks: Int,
-            traceMap: TraceMap? = null
+            traceMap: TraceMap? = null,
         ): ProfilingData {
             val entityEntries =
                 entities.asIterable().groupBy { it.key.level.dimension().location() }.mapValues { (_, entries) ->
                     entries.map { (entity, data) ->
-                        Entry(entity, Registry.ENTITY_TYPE.getKey(entity.type).toString(), data)
+                        Entry(entity, BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString(), data)
                     }
                 }
 
@@ -55,7 +55,7 @@ data class ProfilingData(
                 entityEntries,
                 blockEntries,
                 traceMap?.let { SerializedTraceMap.create(it) },
-                ticks
+                ticks,
             )
         }
     }
@@ -67,7 +67,7 @@ data class ProfilingData(
         val type: String,
         val rate: Double,
         val ticks: Int,
-        val traces: SerializedTraceMap
+        val traces: SerializedTraceMap,
     ) {
         constructor(obj: Any, type: String, data: Profiler.TimingData) : this(
             (obj as? Entity)?.id,
@@ -75,7 +75,7 @@ data class ProfilingData(
             type,
             data.time.toDouble() / data.ticks.toDouble(),
             data.ticks,
-            SerializedTraceMap.create(data.traces)
+            SerializedTraceMap.create(data.traces),
         )
     }
 
@@ -84,7 +84,7 @@ data class ProfilingData(
         val classname: String,
         val fileName: String?,
         val lineNumber: Int,
-        val methodName: String
+        val methodName: String,
     ) {
         constructor(el: StackTraceElement) : this(el.className, el.fileName, el.lineNumber, el.methodName)
     }
@@ -94,7 +94,7 @@ data class ProfilingData(
         val className: String,
         val methodName: String,
         val children: List<SerializedTraceMap>,
-        val count: Int
+        val count: Int,
     ) {
         companion object {
             fun create(traceMap: TraceMap): SerializedTraceMap {
@@ -107,7 +107,7 @@ data class ProfilingData(
                         Remapper.transform(map)
                         SerializedTraceMap.create(map)
                     }.sortedByDescending { it.count },
-                    traceMap.count
+                    traceMap.count,
                 )
             }
         }

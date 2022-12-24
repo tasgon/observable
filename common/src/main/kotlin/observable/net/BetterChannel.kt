@@ -149,7 +149,7 @@ class BetterChannel(id: ResourceLocation) {
                 val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
                 ProtoBuf.decodeFromByteArray<T>(istream.readBytes())
             },
-            validate(consumer)
+            validate(consumer),
         )
         LOGGER.info("Registered ${T::class.java}")
     }

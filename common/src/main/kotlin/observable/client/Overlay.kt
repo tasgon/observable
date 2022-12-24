@@ -3,7 +3,6 @@ package observable.client
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
-import com.mojang.math.Matrix4f
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
@@ -16,6 +15,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.phys.Vec3
 import observable.Observable
+import org.joml.Matrix4f
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -31,7 +31,7 @@ object Overlay {
             (rateMicros / 100.0 * 255).roundToInt().coerceIn(0, 255),
             ((100.0 - rateMicros) / 100.0 * 255).roundToInt().coerceIn(0, 255),
             0,
-            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100)
+            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100),
         )
 
         val hex: Int = with(this) {
@@ -69,7 +69,7 @@ object Overlay {
             false,
             true,
             {},
-            {}
+            {},
         ) {
         companion object {
             fun build(): RenderType {
@@ -86,7 +86,7 @@ object Overlay {
                     Integer.TYPE,
                     boolType,
                     boolType,
-                    RenderType.CompositeState::class.java
+                    RenderType.CompositeState::class.java,
                 )
                 val fn = RenderType::class.java.declaredMethods.filter { method ->
                     method.parameterTypes.contentEquals(parameterTypes)
@@ -101,7 +101,7 @@ object Overlay {
                     256,
                     false,
                     false,
-                    buildCompositeState()
+                    buildCompositeState(),
                 ) as RenderType
             }
 
@@ -117,13 +117,13 @@ object Overlay {
                                 RenderSystem.enableBlend()
                                 RenderSystem.blendFunc(
                                     GlStateManager.SourceFactor.SRC_ALPHA,
-                                    GlStateManager.DestFactor.ONE
+                                    GlStateManager.DestFactor.ONE,
                                 )
-                            }
+                            },
                         ) {
                             RenderSystem.disableBlend()
                             RenderSystem.defaultBlendFunc()
-                        }
+                        },
                     ).createCompositeState(true)
             }
         }
@@ -240,14 +240,14 @@ object Overlay {
         poseStack: PoseStack,
         partialTicks: Float,
         camera: Camera,
-        bufSrc: MultiBufferSource
+        bufSrc: MultiBufferSource,
     ) {
         val rate = entry.rate
         val entity = entry.entity ?: return
         if (entity.isRemoved || (
-            entity == Minecraft.getInstance().player &&
-                entity.deltaMovement.lengthSqr() > .01
-            )
+                entity == Minecraft.getInstance().player &&
+                    entity.deltaMovement.lengthSqr() > .01
+                )
         ) {
             return
         }
@@ -260,7 +260,7 @@ object Overlay {
             pos = pos.add(
                 with(entity.deltaMovement) {
                     Vec3(x, y.coerceAtLeast(0.0), z)
-                }.scale(partialTicks.toDouble())
+                }.scale(partialTicks.toDouble()),
             )
         } else {
             text += " [X]"
@@ -272,7 +272,7 @@ object Overlay {
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
                 text, -font.width(text).toFloat() / 2, 0F, entry.color.hex, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0,
             )
         }
 
@@ -325,7 +325,7 @@ object Overlay {
         entry: Entry.BlockEntry,
         poseStack: PoseStack,
         camera: Camera,
-        bufSrc: MultiBufferSource
+        bufSrc: MultiBufferSource,
     ) {
         poseStack.pushPose()
 
@@ -339,7 +339,7 @@ object Overlay {
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
                 text, -font.width(text).toFloat() / 2, 0F, col, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0
+                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0,
             )
         }
 

@@ -1,6 +1,6 @@
 version: 0.1
 cli:
-  version: 1.0.1
+  version: 1.2.1
 plugins:
   sources:
     - id: trunk
@@ -8,21 +8,24 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 lint:
   enabled:
-    - actionlint@1.6.21
+    - actionlint@1.6.22
     - git-diff-check@SYSTEM
-    - gitleaks@8.15.0
+    - gitleaks@8.15.2
     - markdownlint@0.32.2
-    - prettier@2.7.1
-    - shellcheck@0.8.0
+    - prettier@2.8.1
+    - shellcheck@0.9.0
     - shfmt@3.5.0
-    - taplo@release-taplo-cli-0.7.0
-    - ktlint@0.47.1
+    - taplo@0.7.0
+    - ktlint@0.48.0
   ignore:
     - linters: [ALL]
       paths:
         - gradlew*
 actions:
   enabled:
+    - trunk-announce
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
     - trunk-upgrade-available
 runtimes:
   enabled:

@@ -9,7 +9,7 @@ class TraceMap(
     var className: String = "null",
     var methodName: String = "null",
     val children: MutableMap<MapKey, TraceMap> = mutableMapOf(),
-    var count: Int = 0
+    var count: Int = 0,
 ) {
     constructor(target: KClass<*>) :
         this(target.java.name)

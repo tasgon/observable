@@ -14,7 +14,7 @@ enum class ModLoader {
 val BASE_URL = "https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_18"
 val MAPPING_URLS = mapOf(
     ModLoader.FABRIC to "$BASE_URL/yarn.json",
-    ModLoader.FORGE to "$BASE_URL/mcp.json"
+    ModLoader.FORGE to "$BASE_URL/mcp.json",
 )
 
 inline val JsonElement?.stringMap get() = this?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: mapOf()
@@ -29,7 +29,7 @@ object Remapper {
             val jsonData = Json.parseToJsonElement(URL(MAPPING_URLS[modLoader]).readText()).jsonObject
             RemappingData(
                 if (modLoader == ModLoader.FABRIC) jsonData["classes"].stringMap else mapOf(),
-                jsonData["methods"].stringMap
+                jsonData["methods"].stringMap,
             )
         } catch (e: Exception) {
             Observable.LOGGER.warn("Unable to get profiling data! ${e.message}")

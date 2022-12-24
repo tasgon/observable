@@ -10,7 +10,7 @@ class BetterCheckbox(
     height: Int,
     component: Component,
     default: Boolean,
-    var callback: ((Boolean) -> Unit)
+    var callback: ((Boolean) -> Unit),
 ) :
     Checkbox(x, y, width, height, component, default) {
     override fun onPress() {

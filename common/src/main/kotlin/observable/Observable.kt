@@ -50,7 +50,7 @@ object Observable {
             "key.observable.profile",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R,
-            "category.observable.keybinds"
+            "category.observable.keybinds",
         )
     }
 
@@ -95,7 +95,7 @@ object Observable {
                         S2CPacket.Availability.Available
                     } else {
                         S2CPacket.Availability.NoPermissions
-                    }
+                    },
                 )
             }
         }
@@ -155,8 +155,8 @@ object Observable {
                                     return null
                                 }
                             })
-                        }
-                )
+                        },
+                ),
             )
         }
 
@@ -183,8 +183,8 @@ object Observable {
                             }
                             ctx.source.sendSuccess(Component.translatable("text.observable.profile_started", duration), false)
                             1
-                        }
-                    )
+                        },
+                    ),
                 )
                 .then(
                     literal("allow").then(
@@ -197,8 +197,8 @@ object Observable {
                             }
                             ServerSettings.sync()
                             1
-                        }
-                    )
+                        },
+                    ),
                 )
                 .then(
                     literal("deny").then(
@@ -211,8 +211,8 @@ object Observable {
                             }
                             ServerSettings.sync()
                             1
-                        }
-                    )
+                        },
+                    ),
                 )
                 .then(
                     literal("set").let {
@@ -232,11 +232,11 @@ object Observable {
                                                 ctx.source.sendFailure(Component.literal("Error setting value\n$e"))
                                                 0
                                             }
-                                        }
-                                )
+                                        },
+                                ),
                             )
                         }
-                    }
+                    },
                 )
                 .then(
                     literal("tp").then(
@@ -248,14 +248,14 @@ object Observable {
                                         val id = getInteger(ctx, "id")
                                         val pos = level.getEntity(id)?.position() ?: run {
                                             ctx.source.sendFailure(
-                                                Component.translatable("text.observable.entity_not_found")
+                                                Component.translatable("text.observable.entity_not_found"),
                                             )
                                             return@executes 0
                                         }
                                         teleport(ctx, pos)
                                         1
-                                    }
-                                )
+                                    },
+                                ),
                             )
                             .then(
                                 literal("position")
@@ -263,11 +263,11 @@ object Observable {
                                         argument("pos", vec3()).executes { ctx ->
                                             teleport(ctx, getVec3(ctx, "pos"))
                                             1
-                                        }
-                                    )
+                                        },
+                                    ),
 
-                            )
-                    )
+                            ),
+                    ),
                 )
 
             dispatcher.register(cmd)

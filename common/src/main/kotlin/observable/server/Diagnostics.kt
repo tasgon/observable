@@ -24,9 +24,9 @@ fun Profiler.getDiagnostics(): JsonObject {
                     "Mods",
                     Platform.getMods().joinToString("\n") { mod ->
                         "'${mod.name}' (version: ${mod.version})"
-                    }
+                    },
                 )
-            }
+            },
         )
     }
 }

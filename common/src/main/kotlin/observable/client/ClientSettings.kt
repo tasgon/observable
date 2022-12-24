@@ -41,7 +41,7 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
             y,
             40,
             20,
-            Component.literal("")
+            Component.literal(""),
         )
         box.value = prop.get().toString()
         box.setFilter {
@@ -74,10 +74,10 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
                 width / 2,
                 20,
                 Component.literal(""),
-                true
+                true,
             ) {
                 ClientSettings.normalized = it
-            }
+            },
         )
     }
 
@@ -89,7 +89,7 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
                 field,
                 width / 4,
                 (entry as AbstractWidget).y,
-                0xFFFFFF
+                0xFFFFFF,
             )
         }
 

@@ -20,7 +20,7 @@ class S2CPacket {
     @Serializable
     enum class Availability {
         Available,
-        NoPermissions
+        NoPermissions,
     }
 
     @Serializable

@@ -34,7 +34,7 @@ object ContinuousPerfEval {
                     playerList.players.filter {
                         Observable.hasPermission(it)
                     },
-                    S2CPacket.ConsiderProfiling(tps)
+                    S2CPacket.ConsiderProfiling(tps),
                 )
                 lastNotified = System.currentTimeMillis()
             }

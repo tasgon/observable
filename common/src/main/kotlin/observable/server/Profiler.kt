@@ -6,7 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
-import net.minecraft.core.Registry
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.*
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
@@ -59,7 +59,7 @@ class Profiler {
             0,
             0,
             TraceMap(blockEntity::class),
-            blockEntity.type
+            blockEntity.type,
         )
     }
 
@@ -70,7 +70,7 @@ class Profiler {
                     0,
                     0,
                     TraceMap(blockState::class),
-                    blockState.block.descriptionId
+                    blockState.block.descriptionId,
                 )
             }
 
@@ -80,7 +80,7 @@ class Profiler {
                 0,
                 0,
                 TraceMap(fluidState::class),
-                Registry.FLUID.getKey(fluidState.type).toString()
+                BuiltInRegistries.FLUID.getKey(fluidState.type).toString(),
             )
         }
 
@@ -114,7 +114,7 @@ class Profiler {
         val durMs = duration.toLong() * 1000L
         Observable.CHANNEL.sendToPlayers(
             GameInstance.getServer()!!.playerList.players,
-            S2CPacket.ProfilingStarted(startTime + durMs)
+            S2CPacket.ProfilingStarted(startTime + durMs),
         )
         Timer("Profiler", false).schedule(durMs) {
             val result = stopRunning()

@@ -83,7 +83,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                     Util.getPlatform().openUri(dest)
                 }
                 mc.setScreen(this)
-            }, dest, true)
+            }, dest, true),
         )
     }
 
@@ -114,37 +114,41 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         }.start()
     }
 
+    fun button(x: Int, y: Int, width: Int, height: Int, component: Component, onPress: () -> Unit): Button {
+        val btn = Button.builder(component) { onPress() }
+            .pos(x, y)
+            .size(width, height)
+            .build()
+        return addRenderableWidget(btn)
+    }
+
     override fun init() {
         super.init()
 
         ProfileScreen.HAS_BEEN_OPENED = true
 
-        val startBtn = addRenderableWidget(
-            Button(
-                0,
-                height / 2 - 48,
-                100,
-                20,
-                Component.translatable("text.observable.profile_tps")
-            ) {
-                val duration = (action as Action.NewProfile).duration
-                Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
-            }
-        )
+        val startBtn = button(
+            0,
+            height / 2 - 48,
+            100,
+            20,
+            Component.translatable("text.observable.profile_tps"),
+        ) {
+            val duration = (action as Action.NewProfile).duration
+            Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
+        }
         startBtn.active = action is Action.NewProfile
         startBtn.x = width / 2 - startBtn.width - 4
 
-        fpsBtn = addRenderableWidget(
-            Button(
-                width / 2 + 4,
-                startBtn.y,
-                startBtn.width,
-                startBtn.height,
-                Component.translatable("screen.observable.client_settings")
-            ) {
-                GameInstance.getClient().setScreen(ClientSettingsGui())
-            }
-        ) as Button
+        fpsBtn = button(
+            width / 2 + 4,
+            startBtn.y,
+            startBtn.width,
+            startBtn.height,
+            Component.translatable("screen.observable.client_settings"),
+        ) {
+            GameInstance.getClient().setScreen(ClientSettingsGui())
+        }
 
         val samplerBtn = addRenderableWidget(
             BetterCheckbox(
@@ -153,10 +157,10 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 fpsBtn.x + fpsBtn.width - startBtn.x,
                 20,
                 Component.translatable("text.observable.sampler"),
-                sample
+                sample,
             ) {
                 sample = it
-            }
+            },
         )
 
         val longWidth = fpsBtn.x + fpsBtn.width - samplerBtn.x
@@ -170,25 +174,23 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 samplerBtn.y + samplerBtn.height + 16,
                 smallWidth * 2,
                 20,
-                editFieldDesc
-            )
+                editFieldDesc,
+            ),
         )
         editField.setSuggestion(editFieldDesc.string)
         editField.setResponder {
             editField.setSuggestion(if (it.isEmpty()) editFieldDesc.string else "")
         }
 
-        getBtn = addRenderableWidget(
-            Button(
-                editField.x + editField.width + 8,
-                editField.y,
-                smallWidth,
-                20,
-                Component.translatable("text.observable.get_btn")
-            ) {
-                getData(editField.value)
-            }
-        )
+        getBtn = button(
+            editField.x + editField.width + 8,
+            editField.y,
+            smallWidth,
+            20,
+            Component.translatable("text.observable.get_btn"),
+        ) {
+            getData(editField.value)
+        }
 
         overlayBtn = addRenderableWidget(
             BetterCheckbox(
@@ -197,7 +199,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 editField.width,
                 20,
                 Component.translatable("text.observable.overlay"),
-                Overlay.enabled
+                Overlay.enabled,
             ) {
                 if (it) {
                     synchronized(Overlay) {
@@ -205,7 +207,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                     }
                 }
                 Overlay.enabled = it
-            }
+            },
         )
 
         if (Observable.RESULTS == null) {
@@ -214,39 +216,33 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             }
         }
 
-        val learnBtn = addRenderableWidget(
-            Button(
-                startBtn.x,
-                overlayBtn.y + overlayBtn.height + 8,
-                smallWidth,
-                20,
-                Component.translatable("text.observable.docs")
-            ) {
-                openLink("https://github.com/tasgon/observable/wiki")
-            }
-        )
-        val helpBtn = addRenderableWidget(
-            Button(
-                learnBtn.x + learnBtn.width + 4,
-                learnBtn.y,
-                smallWidth,
-                20,
-                Component.translatable("text.observable.discord")
-            ) {
-                openLink("https://discord.gg/sfPbb3b5tF")
-            }
-        )
-        val donateBtn = addRenderableWidget(
-            Button(
-                helpBtn.x + helpBtn.width + 4,
-                helpBtn.y,
-                smallWidth,
-                20,
-                Component.translatable("text.observable.donate")
-            ) {
-                openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
-            }
-        )
+        val learnBtn = button(
+            startBtn.x,
+            overlayBtn.y + overlayBtn.height + 8,
+            smallWidth,
+            20,
+            Component.translatable("text.observable.docs"),
+        ) {
+            openLink("https://github.com/tasgon/observable/wiki")
+        }
+        val helpBtn = button(
+            learnBtn.x + learnBtn.width + 4,
+            learnBtn.y,
+            smallWidth,
+            20,
+            Component.translatable("text.observable.discord"),
+        ) {
+            openLink("https://discord.gg/sfPbb3b5tF")
+        }
+        val donateBtn = button(
+            helpBtn.x + helpBtn.width + 4,
+            helpBtn.y,
+            smallWidth,
+            20,
+            Component.translatable("text.observable.donate"),
+        ) {
+            openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
+        }
 
         this.startBtn = startBtn
         if (action == Action.UNAVAILABLE ||
@@ -265,7 +261,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             action.statusMsg,
             width / 2,
             startBtn!!.y - this.font.lineHeight - 4,
-            0xFFFFFF
+            0xFFFFFF,
         )
 
         super.render(poseStack, i, j, f)
