@@ -104,7 +104,7 @@ unifiedPublishing {
         displayName = "$project.version (forge)"
         releaseType = "$rootProject.release_channel"
         changelog = "See Observable's GitHub releases page for all changes between versions."
-        gameVersions = ["1.19.2"]
+        gameVersions = ["$project.minecraft_version"]
         gameLoaders = ["forge"]
         mainPublication remapJar
         relations {
@@ -119,7 +119,7 @@ unifiedPublishing {
             curseforge {
                 token = CURSE_API_KEY
                 id = rootProject.curseforge_id
-                gameVersions.addAll "Java 17", "1.19-Snapshot"
+                gameVersions.addAll "Java 17"
             }
         }
 
