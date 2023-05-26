@@ -11,6 +11,7 @@ import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.TextComponent
 import net.minecraft.network.chat.TranslatableComponent
 import observable.Observable
@@ -55,13 +56,14 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         data class Custom(val text: String) : Action()
 
         val statusMsg get() = when (this) {
-            is NewProfile -> "Duration (scroll): $duration seconds"
-            is TPSProfilerRunning ->
-                "Running for another %.1f seconds"
-                    .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0))
-            is TPSProfilerCompleted -> "Profiling finished, please wait..."
-            is ObservableStatus -> TranslatableComponent(text).string
-            is Custom -> text
+            is NewProfile -> TranslatableComponent("text.observable.status.new", duration)
+            is TPSProfilerRunning -> TranslatableComponent(
+                "text.observable.status.running",
+                "%.1f".format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0))
+            )
+            is TPSProfilerCompleted -> TranslatableComponent("text.observable.status.finished")
+            is ObservableStatus -> TranslatableComponent(text)
+            is Custom -> TextComponent(text)
         }
     }
 
@@ -112,37 +114,44 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
         }.start()
     }
 
+    fun button(x: Int, y: Int, width: Int, height: Int, component: Component, onPress: () -> Unit): Button {
+        val btn = Button(
+            x,
+            y,
+            width,
+            height,
+            component
+        ) { onPress() }
+        return addRenderableWidget(btn)
+    }
+
     override fun init() {
         super.init()
 
-        ProfileScreen.HAS_BEEN_OPENED = true
+        HAS_BEEN_OPENED = true
 
-        val startBtn = addRenderableWidget(
-            Button(
-                0,
-                height / 2 - 48,
-                100,
-                20,
-                TranslatableComponent("text.observable.profile_tps")
-            ) {
-                val duration = (action as Action.NewProfile).duration
-                Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
-            }
-        )
+        val startBtn = button(
+            0,
+            height / 2 - 48,
+            100,
+            20,
+            TranslatableComponent("text.observable.profile_tps")
+        ) {
+            val duration = (action as Action.NewProfile).duration
+            Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
+        }
         startBtn.active = action is Action.NewProfile
         startBtn.x = width / 2 - startBtn.width - 4
 
-        fpsBtn = addRenderableWidget(
-            Button(
-                width / 2 + 4,
-                startBtn.y,
-                startBtn.width,
-                startBtn.height,
-                TranslatableComponent("screen.observable.client_settings")
-            ) {
-                GameInstance.getClient().setScreen(ClientSettingsGui())
-            }
-        ) as Button
+        fpsBtn = button(
+            width / 2 + 4,
+            startBtn.y,
+            startBtn.width,
+            startBtn.height,
+            TranslatableComponent("screen.observable.client_settings")
+        ) {
+            GameInstance.getClient().setScreen(ClientSettingsGui())
+        }
 
         val samplerBtn = addRenderableWidget(
             BetterCheckbox(
@@ -176,17 +185,15 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             editField.setSuggestion(if (it.isEmpty()) editFieldDesc.string else "")
         }
 
-        getBtn = addRenderableWidget(
-            Button(
-                editField.x + editField.width + 8,
-                editField.y,
-                smallWidth,
-                20,
-                TranslatableComponent("text.observable.get_btn")
-            ) {
-                getData(editField.value)
-            }
-        )
+        getBtn = button(
+            editField.x + editField.width + 8,
+            editField.y,
+            smallWidth,
+            20,
+            TranslatableComponent("text.observable.get_btn")
+        ) {
+            getData(editField.value)
+        }
 
         overlayBtn = addRenderableWidget(
             BetterCheckbox(
@@ -212,39 +219,33 @@ class ProfileScreen : Screen(TranslatableComponent("screen.observable.profile"))
             }
         }
 
-        val learnBtn = addRenderableWidget(
-            Button(
-                startBtn.x,
-                overlayBtn.y + overlayBtn.height + 8,
-                smallWidth,
-                20,
-                TranslatableComponent("text.observable.docs")
-            ) {
-                openLink("https://github.com/tasgon/observable/wiki")
-            }
-        )
-        val helpBtn = addRenderableWidget(
-            Button(
-                learnBtn.x + learnBtn.width + 4,
-                learnBtn.y,
-                smallWidth,
-                20,
-                TranslatableComponent("text.observable.discord")
-            ) {
-                openLink("https://discord.gg/sfPbb3b5tF")
-            }
-        )
-        val donateBtn = addRenderableWidget(
-            Button(
-                helpBtn.x + helpBtn.width + 4,
-                helpBtn.y,
-                smallWidth,
-                20,
-                TranslatableComponent("text.observable.donate")
-            ) {
-                openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
-            }
-        )
+        val learnBtn = button(
+            startBtn.x,
+            overlayBtn.y + overlayBtn.height + 8,
+            smallWidth,
+            20,
+            TranslatableComponent("text.observable.docs")
+        ) {
+            openLink("https://github.com/tasgon/observable/wiki")
+        }
+        val helpBtn = button(
+            learnBtn.x + learnBtn.width + 4,
+            learnBtn.y,
+            smallWidth,
+            20,
+            TranslatableComponent("text.observable.discord")
+        ) {
+            openLink("https://discord.gg/sfPbb3b5tF")
+        }
+        val donateBtn = button(
+            helpBtn.x + helpBtn.width + 4,
+            helpBtn.y,
+            smallWidth,
+            20,
+            TranslatableComponent("text.observable.donate")
+        ) {
+            openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
+        }
 
         this.startBtn = startBtn
         if (action == Action.UNAVAILABLE ||

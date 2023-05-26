@@ -2,6 +2,7 @@ package observable.mixin;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -13,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Random;
+import java.util.function.Consumer;
 
 @Mixin(ServerLevel.class)
 public class ServerLevelMixin {
@@ -46,5 +48,31 @@ public class ServerLevelMixin {
             Props.currentTarget.set(null);
             data.setTicks(data.getTicks() + 1);
         }
+    }
+
+    public final void track(Entity entity, Consumer<Entity> consumer) {
+        if (Props.notProcessing) consumer.accept(entity);
+        else {
+            if (Props.entityDepth < 0) Props.entityDepth = Thread.currentThread().getStackTrace().length - 1;
+            Profiler.TimingData data = Observable.INSTANCE.getPROFILER().process(entity);
+            Props.currentTarget.set(data);
+            long start = System.nanoTime();
+            consumer.accept(entity);
+            data.setTime(System.nanoTime() - start + data.getTime());
+            Props.currentTarget.set(null);
+            data.setTicks(data.getTicks() + 1);
+        }
+    }
+
+    @Redirect(method = "tickNonPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;tick()V"))
+    public final void onTickNonPassenger(Entity entity) {
+        track(entity, Entity::tick);
+    }
+
+    @Redirect(method = "tickPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;rideTick()V"))
+    public final void onTickPassenger(Entity entity) {
+        track(entity, Entity::rideTick);
     }
 }
