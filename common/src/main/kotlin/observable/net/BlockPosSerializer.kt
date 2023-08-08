@@ -9,13 +9,15 @@ class BlockPosSerializer : KSerializer<BlockPos> {
     @kotlinx.serialization.Serializable
     private data class SerializableBlockPos(val x: Int, val y: Int, val z: Int) {
         constructor(pos: BlockPos) : this(pos.x, pos.y, pos.z)
-        val pos get() = BlockPos(x, y, z)
+
+        val pos
+            get() = BlockPos(x, y, z)
     }
 
     private val delegate = SerializableBlockPos.serializer()
     override val descriptor = delegate.descriptor
-    override fun deserialize(decoder: Decoder) =
-        delegate.deserialize(decoder).pos
+
+    override fun deserialize(decoder: Decoder) = delegate.deserialize(decoder).pos
 
     override fun serialize(encoder: Encoder, value: BlockPos) =
         delegate.serialize(encoder, SerializableBlockPos(value))

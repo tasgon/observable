@@ -22,10 +22,10 @@ class BetterChannel(id: ResourceLocation) {
     companion object {
         val LOGGER = LogManager.getLogger("ObservableNet")
     }
+
     var rawChannel = NetworkChannel.create(id)
 
-    @Serializable
-    data class PartialPacketBegin(val id: Long, val type: String)
+    @Serializable data class PartialPacketBegin(val id: Long, val type: String)
 
     @Serializable
     class PartialPacketData(val id: Long, val data: ByteArray, val index: Int, val length: Int)
@@ -38,7 +38,9 @@ class BetterChannel(id: ResourceLocation) {
             val PACKET_SIZE = 1000000
 
             @OptIn(ExperimentalStdlibApi::class)
-            inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
+            inline fun <reified T> register(
+                noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit
+            ) {
                 val type = typeOf<T>()
                 KNOWN_TYPES[T::class.java.name] = type
                 ACTIONS[type] = { obj, ctx ->
@@ -58,22 +60,19 @@ class BetterChannel(id: ResourceLocation) {
                     it.packets[packet.index] = packet.data
                     if (packet.length == it.packets.size) {
                         LOGGER.info("Assembling packet ${it.type}")
-                        it.assemble()?.let { pkt ->
-                            ACTIONS[it.type]?.invoke(pkt, supplier)
-                        }
+                        it.assemble()?.let { pkt -> ACTIONS[it.type]?.invoke(pkt, supplier) }
                         MAP.remove(packet.id)
                     }
                 }
             }
         }
+
         var packets = mutableMapOf<Int, ByteArray>()
 
         @OptIn(ExperimentalSerializationApi::class)
         fun assemble(): Any? {
             val bs = ByteArrayOutputStream()
-            packets.toList().sortedBy { it.first }.forEach {
-                bs.write(it.second)
-            }
+            packets.toList().sortedBy { it.first }.forEach { bs.write(it.second) }
             bs.close()
             return try {
                 ProtoBuf.decodeFromByteArray(serializer(type), bs.toByteArray())
@@ -102,11 +101,14 @@ class BetterChannel(id: ResourceLocation) {
     }
 
     /**
-     * Provide a function that will attempt to call another function with packet data and fail gracefully if not able.
+     * Provide a function that will attempt to call another function with packet data and fail
+     * gracefully if not able.
      *
      * @param action The function to call
      */
-    inline fun <reified T> attempt(crossinline action: (FriendlyByteBuf) -> T): (FriendlyByteBuf) -> T? = {
+    inline fun <reified T> attempt(
+        crossinline action: (FriendlyByteBuf) -> T
+    ): (FriendlyByteBuf) -> T? = {
         try {
             action(it)
         } catch (e: Exception) {
@@ -116,23 +118,29 @@ class BetterChannel(id: ResourceLocation) {
         }
     }
 
-    inline fun <reified T> validate(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) =
-        { t: T?, v: Supplier<NetworkManager.PacketContext> ->
-            if (t != null) consumer(t, v)
-        }
+    inline fun <reified T> validate(
+        noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit
+    ) = { t: T?, v: Supplier<NetworkManager.PacketContext> -> if (t != null) consumer(t, v) }
 
     @OptIn(ExperimentalSerializationApi::class)
-    inline fun <reified T> register(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
+    inline fun <reified T> register(
+        noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit
+    ) {
         LOGGER.info("Registering ${T::class.java}")
         PartialPacketAssembler.register(consumer)
-        rawChannel.register(T::class.java, { t, buf ->
-            buf.writeByteArray(ProtoBuf.encodeToByteArray(t))
-        }, attempt { ProtoBuf.decodeFromByteArray<T>(it.readByteArray()) }, validate(consumer))
+        rawChannel.register(
+            T::class.java,
+            { t, buf -> buf.writeByteArray(ProtoBuf.encodeToByteArray(t)) },
+            attempt { ProtoBuf.decodeFromByteArray<T>(it.readByteArray()) },
+            validate(consumer)
+        )
         LOGGER.info("Registered ${T::class.java}")
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    inline fun <reified T> registerCompressed(noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit) {
+    inline fun <reified T> registerCompressed(
+        noinline consumer: (T, Supplier<NetworkManager.PacketContext>) -> Unit
+    ) {
         LOGGER.info("Registering ${T::class.java}")
         rawChannel.register(
             T::class.java,
@@ -149,12 +157,14 @@ class BetterChannel(id: ResourceLocation) {
                 val istream = InflaterInputStream(ByteArrayInputStream(it.readByteArray()))
                 ProtoBuf.decodeFromByteArray<T>(istream.readBytes())
             },
-            validate(consumer),
+            validate(consumer)
         )
         LOGGER.info("Registered ${T::class.java}")
     }
 
-    fun <T> sendToPlayers(players: List<ServerPlayer>, msg: T) = rawChannel.sendToPlayers(players, msg)
+    fun <T> sendToPlayers(players: List<ServerPlayer>, msg: T) =
+        rawChannel.sendToPlayers(players, msg)
+
     fun <T> sendToPlayer(player: ServerPlayer, msg: T) = rawChannel.sendToPlayer(player, msg)
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -163,8 +173,9 @@ class BetterChannel(id: ResourceLocation) {
         val bs = ByteArrayInputStream(data)
         val id = UUID.randomUUID().leastSignificantBits
         rawChannel.sendToPlayers(players, PartialPacketBegin(id, T::class.java.name))
-        val size = bs.available() / PartialPacketAssembler.PACKET_SIZE +
-            (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
+        val size =
+            bs.available() / PartialPacketAssembler.PACKET_SIZE +
+                (bs.available() % PartialPacketAssembler.PACKET_SIZE).coerceAtMost(1)
         var idx = 0
         while (bs.available() > 0) {
             val arr = ByteArray(bs.available().coerceAtMost(PartialPacketAssembler.PACKET_SIZE))

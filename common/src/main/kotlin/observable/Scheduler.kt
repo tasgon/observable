@@ -10,9 +10,7 @@ class Scheduler {
     }
 
     init {
-        TickEvent.SERVER_POST.register {
-            queue.removeFirstOrNull()?.let { it() }
-        }
+        TickEvent.SERVER_POST.register { queue.removeFirstOrNull()?.let { it() } }
     }
 
     fun enqueue(fn: () -> Unit) = synchronized(queue) { queue.addLast(fn) }

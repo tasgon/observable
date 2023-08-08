@@ -14,9 +14,7 @@ class EntitySerializer : KSerializer<Entity?> {
     override val descriptor: SerialDescriptor = delegate.descriptor
 
     override fun deserialize(decoder: Decoder): Entity? {
-        return delegate.deserialize(decoder)?.let {
-            Minecraft.getInstance().level?.getEntity(it)
-        }
+        return delegate.deserialize(decoder)?.let { Minecraft.getInstance().level?.getEntity(it) }
     }
 
     override fun serialize(encoder: Encoder, value: Entity?) {

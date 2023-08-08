@@ -4,9 +4,7 @@ import observable.Observable
 import observable.Props
 import kotlin.random.Random
 
-/**
- * Tagged stack trace sampler.
- */
+/** Tagged stack trace sampler. */
 class TaggedSampler(val thread: Thread) : Runnable {
     data class Sample(val target: Profiler.TimingData?, val trace: Array<StackTraceElement>)
 

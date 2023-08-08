@@ -20,7 +20,6 @@ import net.minecraft.commands.arguments.DimensionArgument.dimension
 import net.minecraft.commands.arguments.DimensionArgument.getDimension
 import net.minecraft.commands.arguments.GameProfileArgument.gameProfile
 import net.minecraft.commands.arguments.GameProfileArgument.getGameProfiles
-import net.minecraft.commands.arguments.coordinates.BlockPosArgument.*
 import net.minecraft.commands.arguments.coordinates.Vec3Argument.getVec3
 import net.minecraft.commands.arguments.coordinates.Vec3Argument.vec3
 import net.minecraft.network.chat.ClickEvent
@@ -40,7 +39,6 @@ import observable.server.ServerSettings
 import observable.server.TypeMap
 import org.apache.logging.log4j.LogManager
 import org.lwjgl.glfw.GLFW
-import java.util.*
 
 object Observable {
     const val MOD_ID = "observable"
@@ -50,7 +48,7 @@ object Observable {
             "key.observable.profile",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R,
-            "category.observable.keybinds",
+            "category.observable.keybinds"
         )
     }
 
@@ -95,7 +93,7 @@ object Observable {
                         S2CPacket.Availability.Available
                     } else {
                         S2CPacket.Availability.NoPermissions
-                    },
+                    }
                 )
             }
         }
@@ -143,132 +141,155 @@ object Observable {
             if (ProfileScreen.HAS_BEEN_OPENED) return@register
             Observable.LOGGER.info("Notifying player")
             val tps = "%.2f".format(t.tps)
-            GameInstance.getClient().gui.chat.addMessage(
-                Component.translatable(
-                    "text.observable.suggest",
-                    tps,
-                    Component.translatable("text.observable.suggest_action").withStyle(ChatFormatting.UNDERLINE)
-                        .withStyle {
-                            it.withClickEvent(object : ClickEvent(null, "") {
-                                override fun getAction(): Action? {
-                                    GameInstance.getClient().setScreen(PROFILE_SCREEN)
-                                    return null
-                                }
-                            })
-                        },
-                ),
-            )
+            GameInstance.getClient()
+                .gui
+                .chat
+                .addMessage(
+                    Component.translatable(
+                        "text.observable.suggest",
+                        tps,
+                        Component.translatable("text.observable.suggest_action")
+                            .withStyle(ChatFormatting.UNDERLINE)
+                            .withStyle {
+                                it.withClickEvent(
+                                    object : ClickEvent(null, "") {
+                                        override fun getAction(): Action? {
+                                            GameInstance.getClient().setScreen(PROFILE_SCREEN)
+                                            return null
+                                        }
+                                    }
+                                )
+                            }
+                    )
+                )
         }
 
         LifecycleEvent.SERVER_STARTED.register {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
-//            ContinuousPerfEval.start()
+            //            ContinuousPerfEval.start()
             LOGGER.info("Registered thread ${thread.name}")
         }
 
         CommandRegistrationEvent.EVENT.register { dispatcher, ctx, selection ->
-            val cmd = literal("observable")
-                .requires { it.hasPermission(4) }
-                .executes {
-                    it.source.sendSuccess(Component.literal(ServerSettings.toString()), false)
-                    1
-                }
-                .then(
-                    literal("run").then(
-                        argument("duration", integer()).executes { ctx ->
-                            val duration = getInteger(ctx, "duration")
-                            PROFILER.runWithDuration(ctx.source.player, duration, false) { result ->
-                                ctx.source.sendSuccess(result, false)
-                            }
-                            ctx.source.sendSuccess(Component.translatable("text.observable.profile_started", duration), false)
-                            1
-                        },
-                    ),
-                )
-                .then(
-                    literal("allow").then(
-                        argument("player", gameProfile()).executes { ctx ->
-                            getGameProfiles(ctx, "player").forEach { player ->
-                                ServerSettings.allowedPlayers.add(player.id.toString())
-                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
-                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
-                                }
-                            }
-                            ServerSettings.sync()
-                            1
-                        },
-                    ),
-                )
-                .then(
-                    literal("deny").then(
-                        argument("player", gameProfile()).executes { ctx ->
-                            getGameProfiles(ctx, "player").forEach { player ->
-                                ServerSettings.allowedPlayers.remove(player.id.toString())
-                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
-                                    CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
-                                }
-                            }
-                            ServerSettings.sync()
-                            1
-                        },
-                    ),
-                )
-                .then(
-                    literal("set").let {
-                        ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
-                            val argType = TypeMap[field.type] ?: return@fold setCmd
-                            setCmd.then(
-                                literal(field.name).then(
-                                    argument("newVal", argType())
-                                        .executes { ctx ->
-                                            try {
-                                                field.isAccessible = true
-                                                field.set(ServerSettings, ctx.getArgument("newVal", field.type))
-                                                ServerSettings.sync()
-                                                1
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
-                                                ctx.source.sendFailure(Component.literal("Error setting value\n$e"))
-                                                0
-                                            }
-                                        },
-                                ),
-                            )
-                        }
-                    },
-                )
-                .then(
-                    literal("tp").then(
-                        argument("dim", dimension())
+            val cmd =
+                literal("observable")
+                    .requires { it.hasPermission(4) }
+                    .executes {
+                        it.source.sendSuccess(Component.literal(ServerSettings.toString()), false)
+                        1
+                    }
+                    .then(
+                        literal("run")
                             .then(
-                                literal("entity").then(
-                                    argument("id", integer()).executes { ctx ->
-                                        val level = getDimension(ctx, "dim")
-                                        val id = getInteger(ctx, "id")
-                                        val pos = level.getEntity(id)?.position() ?: run {
-                                            ctx.source.sendFailure(
-                                                Component.translatable("text.observable.entity_not_found"),
-                                            )
-                                            return@executes 0
+                                argument("duration", integer()).executes { ctx ->
+                                    val duration = getInteger(ctx, "duration")
+                                    PROFILER.runWithDuration(ctx.source.player, duration, false) { result ->
+                                        ctx.source.sendSuccess(result, false)
+                                    }
+                                    ctx.source.sendSuccess(
+                                        Component.translatable("text.observable.profile_started", duration),
+                                        false
+                                    )
+                                    1
+                                }
+                            )
+                    )
+                    .then(
+                        literal("allow")
+                            .then(
+                                argument("player", gameProfile()).executes { ctx ->
+                                    getGameProfiles(ctx, "player").forEach { player ->
+                                        ServerSettings.allowedPlayers.add(player.id.toString())
+                                        GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                            CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
                                         }
-                                        teleport(ctx, pos)
-                                        1
-                                    },
-                                ),
+                                    }
+                                    ServerSettings.sync()
+                                    1
+                                }
                             )
+                    )
+                    .then(
+                        literal("deny")
                             .then(
-                                literal("position")
+                                argument("player", gameProfile()).executes { ctx ->
+                                    getGameProfiles(ctx, "player").forEach { player ->
+                                        ServerSettings.allowedPlayers.remove(player.id.toString())
+                                        GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                            CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
+                                        }
+                                    }
+                                    ServerSettings.sync()
+                                    1
+                                }
+                            )
+                    )
+                    .then(
+                        literal("set").let {
+                            ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
+                                val argType = TypeMap[field.type] ?: return@fold setCmd
+                                setCmd.then(
+                                    literal(field.name)
+                                        .then(
+                                            argument("newVal", argType()).executes { ctx ->
+                                                try {
+                                                    field.isAccessible = true
+                                                    field.set(
+                                                        ServerSettings,
+                                                        ctx.getArgument("newVal", field.type)
+                                                    )
+                                                    ServerSettings.sync()
+                                                    1
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    ctx.source.sendFailure(
+                                                        Component.literal("Error setting value\n$e")
+                                                    )
+                                                    0
+                                                }
+                                            }
+                                        )
+                                )
+                            }
+                        }
+                    )
+                    .then(
+                        literal("tp")
+                            .then(
+                                argument("dim", dimension())
                                     .then(
-                                        argument("pos", vec3()).executes { ctx ->
-                                            teleport(ctx, getVec3(ctx, "pos"))
-                                            1
-                                        },
-                                    ),
-
-                            ),
-                    ),
-                )
+                                        literal("entity")
+                                            .then(
+                                                argument("id", integer()).executes { ctx ->
+                                                    val level = getDimension(ctx, "dim")
+                                                    val id = getInteger(ctx, "id")
+                                                    val pos =
+                                                        level.getEntity(id)?.position()
+                                                            ?: run {
+                                                                ctx.source.sendFailure(
+                                                                    Component.translatable(
+                                                                        "text.observable.entity_not_found"
+                                                                    )
+                                                                )
+                                                                return@executes 0
+                                                            }
+                                                    teleport(ctx, pos)
+                                                    1
+                                                }
+                                            )
+                                    )
+                                    .then(
+                                        literal("position")
+                                            .then(
+                                                argument("pos", vec3()).executes { ctx ->
+                                                    teleport(ctx, getVec3(ctx, "pos"))
+                                                    1
+                                                }
+                                            )
+                                    )
+                            )
+                    )
 
             dispatcher.register(cmd)
         }
@@ -297,9 +318,7 @@ object Observable {
             }
         }
 
-        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register {
-            Overlay.loadSync(it)
-        }
+        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { Overlay.loadSync(it) }
 
         ClientPlayerEvent.CLIENT_PLAYER_QUIT.register {
             RESULTS = null

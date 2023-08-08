@@ -10,8 +10,7 @@ class ResourceLocationSerializer : KSerializer<ResourceLocation> {
     private val delegate = String.serializer()
     override val descriptor = delegate.descriptor
 
-    override fun deserialize(decoder: Decoder) =
-        ResourceLocation(delegate.deserialize(decoder))
+    override fun deserialize(decoder: Decoder) = ResourceLocation(delegate.deserialize(decoder))
 
     override fun serialize(encoder: Encoder, value: ResourceLocation) =
         delegate.serialize(encoder, value.toString())

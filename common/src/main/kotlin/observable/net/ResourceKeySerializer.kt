@@ -10,7 +10,8 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.level.Level
 
-open class ResourceKeySerializer<T>(val registryKey: ResourceKey<out Registry<T>>) : KSerializer<ResourceKey<T>> {
+open class ResourceKeySerializer<T>(val registryKey: ResourceKey<out Registry<T>>) :
+    KSerializer<ResourceKey<T>> {
     private val delegate = String.serializer()
     override val descriptor = delegate.descriptor
 

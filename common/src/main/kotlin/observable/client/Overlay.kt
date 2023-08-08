@@ -27,24 +27,31 @@ object Overlay {
                 return Color(micros)
             }
         }
-        constructor(rateMicros: Double) : this(
+
+        constructor(
+            rateMicros: Double
+        ) : this(
             (rateMicros / 100.0 * 255).roundToInt().coerceIn(0, 255),
             ((100.0 - rateMicros) / 100.0 * 255).roundToInt().coerceIn(0, 255),
             0,
-            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100),
+            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100)
         )
 
-        val hex: Int = with(this) {
-            val red = if (r > g) 0xFFu else (255 * r / g).toUInt()
-            val green = if (g > r) 0xFFu else (255 * g / r).toUInt()
-            (red shl 16) or (green shl 8) or (0xFFu shl 24)
-        }.toInt()
+        val hex: Int =
+            with(this) {
+                val red = if (r > g) 0xFFu else (255 * r / g).toUInt()
+                val green = if (g > r) 0xFFu else (255 * g / r).toUInt()
+                (red shl 16) or (green shl 8) or (0xFFu shl 24)
+            }
+                .toInt()
     }
 
     sealed class Entry(val color: Color) {
         data class EntityEntry(val entityId: Int, val rate: Double) : Entry(Color.fromNanos(rate)) {
-            val entity get() = Minecraft.getInstance().level?.getEntity(entityId)
+            val entity
+                get() = Minecraft.getInstance().level?.getEntity(entityId)
         }
+
         data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(Color.fromNanos(rate))
     }
 
@@ -69,28 +76,35 @@ object Overlay {
             false,
             true,
             {},
-            {},
+            {}
         ) {
         companion object {
             fun build(): RenderType {
                 val boolType = java.lang.Boolean.TYPE
 
-                // So here's the thing: for some reason, Minecraft decided to not allow any kind of external access to
-                // create a custom RenderType outside of the class. However, we need to make our own to have the block
-                // outlines visible through walls. We can't mixin an invoker either as the CompositeRenderType is private
+                // So here's the thing: for some reason, Minecraft decided to not allow any kind of external
+                // access to
+                // create a custom RenderType outside of the class. However, we need to make our own to have
+                // the block
+                // outlines visible through walls. We can't mixin an invoker either as the
+                // CompositeRenderType is private
                 // within RenderType. We can get around that using reflection, hence this monstrosity.
-                val parameterTypes = arrayOf(
-                    String::class.java,
-                    VertexFormat::class.java,
-                    VertexFormat.Mode::class.java,
-                    Integer.TYPE,
-                    boolType,
-                    boolType,
-                    RenderType.CompositeState::class.java,
-                )
-                val fn = RenderType::class.java.declaredMethods.filter { method ->
-                    method.parameterTypes.contentEquals(parameterTypes)
-                }.first()
+                val parameterTypes =
+                    arrayOf(
+                        String::class.java,
+                        VertexFormat::class.java,
+                        VertexFormat.Mode::class.java,
+                        Integer.TYPE,
+                        boolType,
+                        boolType,
+                        RenderType.CompositeState::class.java
+                    )
+                val fn =
+                    RenderType::class
+                        .java
+                        .declaredMethods
+                        .filter { method -> method.parameterTypes.contentEquals(parameterTypes) }
+                        .first()
                 fn.isAccessible = true
 
                 return fn.invoke(
@@ -101,14 +115,14 @@ object Overlay {
                     256,
                     false,
                     false,
-                    buildCompositeState(),
+                    buildCompositeState()
                 ) as RenderType
             }
 
             private fun buildCompositeState(): CompositeState {
                 return RenderType.CompositeState.builder()
                     .setShaderState(ShaderStateShard { GameRenderer.getPositionColorShader() })
-//                    .setTextureState(EmptyTextureStateShard({}, {}))
+                    //                    .setTextureState(EmptyTextureStateShard({}, {}))
                     .setDepthTestState(DepthTestStateShard("always", 519))
                     .setTransparencyState(
                         RenderStateShard.TransparencyStateShard(
@@ -117,22 +131,21 @@ object Overlay {
                                 RenderSystem.enableBlend()
                                 RenderSystem.blendFunc(
                                     GlStateManager.SourceFactor.SRC_ALPHA,
-                                    GlStateManager.DestFactor.ONE,
+                                    GlStateManager.DestFactor.ONE
                                 )
-                            },
+                            }
                         ) {
                             RenderSystem.disableBlend()
                             RenderSystem.defaultBlendFunc()
-                        },
-                    ).createCompositeState(true)
+                        }
+                    )
+                    .createCompositeState(true)
             }
         }
     }
 
     @Suppress("INACCESSIBLE_TYPE")
-    private val renderType: RenderType by lazy {
-        OverlayRenderType.build()
-    }
+    private val renderType: RenderType by lazy { OverlayRenderType.build() }
 
     fun load(lvl: ClientLevel? = null) {
         val data = Observable.RESULTS ?: return
@@ -140,21 +153,34 @@ object Overlay {
         val levelLocation = level.dimension().location()
         val ticks = data.ticks
         val norm = ClientSettings.normalized
-        entities = data.entities[levelLocation]?.map {
-            Entry.EntityEntry(it.entityId!!, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
-        }.orEmpty().filter { it.rate >= ClientSettings.minRate }.sortedByDescending { it.rate }
+        entities =
+            data.entities[levelLocation]
+                ?.map {
+                    Entry.EntityEntry(
+                        it.entityId!!,
+                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
+                    )
+                }
+                .orEmpty()
+                .filter { it.rate >= ClientSettings.minRate }
+                .sortedByDescending { it.rate }
 
-        blocks = data.blocks[levelLocation]?.map {
-            Entry.BlockEntry(it.position, it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0))
-        }?.filter { it.rate >= ClientSettings.minRate }.orEmpty()
+        blocks =
+            data.blocks[levelLocation]
+                ?.map {
+                    Entry.BlockEntry(
+                        it.position,
+                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
+                    )
+                }
+                ?.filter { it.rate >= ClientSettings.minRate }
+                .orEmpty()
         blockMap = blocks.groupBy { ChunkPos(it.pos) }
 
         dataAvailable = true
     }
 
-    inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) {
-        this.load(lvl)
-    }
+    inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) { this.load(lvl) }
 
     fun render(poseStack: PoseStack, partialTicks: Float, projection: Matrix4f) {
         if (!enabled || Observable.RESULTS == null) return
@@ -164,7 +190,10 @@ object Overlay {
 
         RenderSystem.disableDepthTest()
         RenderSystem.enableBlend()
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA)
+        RenderSystem.blendFunc(
+            GlStateManager.SourceFactor.SRC_ALPHA,
+            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
+        )
 
         poseStack.pushPose()
 
@@ -173,9 +202,7 @@ object Overlay {
             dataAvailable = false
         }
 
-        camera.position.apply {
-            poseStack.translate(-x, -y, -z)
-        }
+        camera.position.apply { poseStack.translate(-x, -y, -z) }
 
         synchronized(this) {
             val cpos = ChunkPos(Minecraft.getInstance().player!!.blockPosition())
@@ -201,7 +228,11 @@ object Overlay {
                 RenderSystem.setShader { GameRenderer.getPositionColorShader() }
                 RenderSystem.disableTexture()
                 it.bind()
-                it.drawWithShader(poseStack.last().pose(), projection, GameRenderer.getPositionColorShader()!!)
+                it.drawWithShader(
+                    poseStack.last().pose(),
+                    projection,
+                    GameRenderer.getPositionColorShader()!!
+                )
                 VertexBuffer.unbind()
                 RenderSystem.enableTexture()
             }
@@ -240,14 +271,12 @@ object Overlay {
         poseStack: PoseStack,
         partialTicks: Float,
         camera: Camera,
-        bufSrc: MultiBufferSource,
+        bufSrc: MultiBufferSource
     ) {
         val rate = entry.rate
         val entity = entry.entity ?: return
-        if (entity.isRemoved || (
-                entity == Minecraft.getInstance().player &&
-                    entity.deltaMovement.lengthSqr() > .01
-                )
+        if (entity.isRemoved ||
+            (entity == Minecraft.getInstance().player && entity.deltaMovement.lengthSqr() > .01)
         ) {
             return
         }
@@ -257,11 +286,11 @@ object Overlay {
         var pos = entity.position()
         if (camera.position.distanceTo(pos) > ClientSettings.maxEntityDist) return
         if (entity.isAlive) {
-            pos = pos.add(
-                with(entity.deltaMovement) {
-                    Vec3(x, y.coerceAtLeast(0.0), z)
-                }.scale(partialTicks.toDouble()),
-            )
+            pos =
+                pos.add(
+                    with(entity.deltaMovement) { Vec3(x, y.coerceAtLeast(0.0), z) }
+                        .scale(partialTicks.toDouble())
+                )
         } else {
             text += " [X]"
         }
@@ -271,20 +300,30 @@ object Overlay {
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
-                text, -font.width(text).toFloat() / 2, 0F, entry.color.hex, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0,
+                text,
+                -font.width(text).toFloat() / 2,
+                0F,
+                entry.color.hex,
+                false,
+                poseStack.last().pose(),
+                bufSrc,
+                true,
+                0,
+                0xF000F0
             )
         }
 
         poseStack.popPose()
     }
 
-    private inline fun drawBlockOutline(entry: Entry.BlockEntry, poseStack: PoseStack, buf: VertexConsumer) {
+    private inline fun drawBlockOutline(
+        entry: Entry.BlockEntry,
+        poseStack: PoseStack,
+        buf: VertexConsumer
+    ) {
         poseStack.pushPose()
 
-        entry.pos.apply {
-            poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble())
-        }
+        entry.pos.apply { poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble()) }
         val mat = poseStack.last().pose()
         entry.color.apply {
             buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
@@ -325,7 +364,7 @@ object Overlay {
         entry: Entry.BlockEntry,
         poseStack: PoseStack,
         camera: Camera,
-        bufSrc: MultiBufferSource,
+        bufSrc: MultiBufferSource
     ) {
         poseStack.pushPose()
 
@@ -338,8 +377,16 @@ object Overlay {
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
-                text, -font.width(text).toFloat() / 2, 0F, col, false,
-                poseStack.last().pose(), bufSrc, true, 0, 0xF000F0,
+                text,
+                -font.width(text).toFloat() / 2,
+                0F,
+                col,
+                false,
+                poseStack.last().pose(),
+                bufSrc,
+                true,
+                0,
+                0xF000F0
             )
         }
 

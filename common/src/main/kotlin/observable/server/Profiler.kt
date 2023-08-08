@@ -25,10 +25,16 @@ import java.util.zip.GZIPOutputStream
 import kotlin.concurrent.schedule
 import kotlin.random.Random
 
-inline val StackTraceElement.classMethod get() = "${this.className} + ${this.methodName}"
+inline val StackTraceElement.classMethod
+    get() = "${this.className} + ${this.methodName}"
 
 class Profiler {
-    data class TimingData(var time: Long, var ticks: Int, var traces: TraceMap, var name: String = "")
+    data class TimingData(
+        var time: Long,
+        var ticks: Int,
+        var traces: TraceMap,
+        var name: String = ""
+    )
 
     var timingsMap = HashMap<Entity, TimingData>()
     lateinit var serverTraceMap: TraceMap
@@ -36,7 +42,7 @@ class Profiler {
     lateinit var samplerThread: Thread
 
     // TODO: consider splitting out block entity timings
-//    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
+    //    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
     var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
     var notProcessing
         get() = Props.notProcessing
@@ -48,41 +54,44 @@ class Profiler {
     var startTime: Long = 0
     var startingTicks: Int = 0
 
-    fun process(entity: Entity) = timingsMap.getOrPut(entity) {
-        TimingData(0, 0, TraceMap(entity::class))
-    }
+    fun process(entity: Entity) =
+        timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
 
-    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) = blockTimingsMap.getOrPut(level.dimension()) {
-        HashMap()
-    }.getOrPut(blockEntity.pos) {
-        TimingData(
-            0,
-            0,
-            TraceMap(blockEntity::class),
-            blockEntity.type,
-        )
-    }
+    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) =
+        blockTimingsMap
+            .getOrPut(level.dimension()) { HashMap() }
+            .getOrPut(blockEntity.pos) {
+                TimingData(
+                    0,
+                    0,
+                    TraceMap(blockEntity::class),
+                    blockEntity.type
+                )
+            }
 
     fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
-        blockTimingsMap.getOrPut(level.dimension()) { HashMap() }
+        blockTimingsMap
+            .getOrPut(level.dimension()) { HashMap() }
             .getOrPut(pos) {
                 TimingData(
                     0,
                     0,
                     TraceMap(blockState::class),
-                    blockState.block.descriptionId,
+                    blockState.block.descriptionId
                 )
             }
 
     fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
-        blockTimingsMap.getOrPut(level.dimension()) { HashMap() }.getOrPut(pos) {
-            TimingData(
-                0,
-                0,
-                TraceMap(fluidState::class),
-                BuiltInRegistries.FLUID.getKey(fluidState.type).toString(),
-            )
-        }
+        blockTimingsMap
+            .getOrPut(level.dimension()) { HashMap() }
+            .getOrPut(pos) {
+                TimingData(
+                    0,
+                    0,
+                    TraceMap(fluidState::class),
+                    BuiltInRegistries.FLUID.getKey(fluidState.type).toString()
+                )
+            }
 
     fun startRunning(sample: Boolean = false) {
         timingsMap.clear()
@@ -104,17 +113,23 @@ class Profiler {
                     serverTraceMap.add(serverThread.stackTrace.reversed().iterator())
                     Thread.sleep(interval + Random.nextLong(-deviation, deviation))
                 }
-            }.start()
+            }
+                .start()
         }
     }
 
-    fun runWithDuration(player: ServerPlayer?, duration: Int, sample: Boolean, onComplete: (Component) -> Unit) {
+    fun runWithDuration(
+        player: ServerPlayer?,
+        duration: Int,
+        sample: Boolean,
+        onComplete: (Component) -> Unit
+    ) {
         this.player = player
         startRunning(sample)
         val durMs = duration.toLong() * 1000L
         Observable.CHANNEL.sendToPlayers(
             GameInstance.getServer()!!.playerList.players,
-            S2CPacket.ProfilingStarted(startTime + durMs),
+            S2CPacket.ProfilingStarted(startTime + durMs)
         )
         Timer("Profiler", false).schedule(durMs) {
             val result = stopRunning()
@@ -131,13 +146,16 @@ class Profiler {
             conn.requestMethod = "POST"
             conn.doOutput = true
 
-            GZIPOutputStream(conn.outputStream).bufferedWriter(Charsets.UTF_8).use { it.write(serialized) }
+            GZIPOutputStream(conn.outputStream).bufferedWriter(Charsets.UTF_8).use {
+                it.write(serialized)
+            }
 
             val profileURL = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             Observable.LOGGER.info("Profile uploaded to $profileURL")
-            val link = Component.literal(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
-                it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
-            }
+            val link =
+                Component.literal(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
+                    it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
+                }
 
             Component.translatable("text.observable.profile_uploaded", link)
         } catch (e: Exception) {
@@ -161,9 +179,11 @@ class Profiler {
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))
         val result = uploadProfile(data, diagnostics)
         Observable.LOGGER.info("Data transfer complete!")
-        GameInstance.getServer()?.playerList?.players?.filter { Observable.hasPermission(it) }?.let {
-            Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive)
-        }
+        GameInstance.getServer()
+            ?.playerList
+            ?.players
+            ?.filter { Observable.hasPermission(it) }
+            ?.let { Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive) }
         return result
     }
 }

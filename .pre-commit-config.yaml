@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ktlint
+        name: ktlint
+        files: .*.kt
+        entry: bash -c "./gradlew ktlintFormat"
+        language: system
+        pass_filenames: false

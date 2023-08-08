@@ -35,14 +35,15 @@ object ClientSettings {
 
 class ClientSettingsGui : Screen(Component.translatable("screen.observable.client_settings")) {
     private fun entry(y: Int, prop: KMutableProperty0<Int>) {
-        val box = EditBox(
-            GameInstance.getClient().font,
-            width * 3 / 4,
-            y,
-            40,
-            20,
-            Component.literal(""),
-        )
+        val box =
+            EditBox(
+                GameInstance.getClient().font,
+                width * 3 / 4,
+                y,
+                40,
+                20,
+                Component.literal("")
+            )
         box.value = prop.get().toString()
         box.setFilter {
             try {
@@ -52,15 +53,15 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
                 false
             }
         }
-        box.setResponder {
-            prop.set(Integer.parseInt(it))
-        }
+        box.setResponder { prop.set(Integer.parseInt(it)) }
         addRenderableWidget(box)
     }
 
-    val fields = listOf("maxBlockDist", "maxEntityDist", "maxEntityCount", "normalize").map {
-        Component.translatable("text.observable.$it")
-    }
+    val fields =
+        listOf("maxBlockDist", "maxEntityDist", "maxEntityCount", "normalize").map {
+            Component.translatable("text.observable.$it")
+        }
+
     override fun init() {
         super.init()
 
@@ -74,10 +75,10 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
                 width / 2,
                 20,
                 Component.literal(""),
-                true,
+                true
             ) {
                 ClientSettings.normalized = it
-            },
+            }
         )
     }
 
@@ -89,7 +90,7 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
                 field,
                 width / 4,
                 (entry as AbstractWidget).y,
-                0xFFFFFF,
+                0xFFFFFF
             )
         }
 

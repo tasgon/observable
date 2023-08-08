@@ -13,9 +13,7 @@ class BlockEntitySerializer : KSerializer<BlockEntity?> {
     override val descriptor: SerialDescriptor = delegate.descriptor
 
     override fun deserialize(decoder: Decoder): BlockEntity? {
-        return delegate.deserialize(decoder)?.let {
-            Minecraft.getInstance().level?.getBlockEntity(it)
-        }
+        return delegate.deserialize(decoder)?.let { Minecraft.getInstance().level?.getBlockEntity(it) }
     }
 
     override fun serialize(encoder: Encoder, value: BlockEntity?) {

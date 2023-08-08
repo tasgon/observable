@@ -22,7 +22,9 @@ import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
     companion object {
-        private val STATUS_FILE get() = File("o_prof")
+        private val STATUS_FILE
+            get() = File("o_prof")
+
         var HAS_BEEN_OPENED = STATUS_FILE.exists()
             private set(value) {
                 if (value && !field) {
@@ -47,21 +49,32 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             val UNAVAILABLE = ObservableStatus("text.observable.unavailable")
             val NO_PERMISSIONS = ObservableStatus("text.observable.no_permissions")
         }
+
         data class NewProfile(var duration: Int) : Action()
+
         data class TPSProfilerRunning(val endTime: Long) : Action()
+
         object TPSProfilerCompleted : Action()
+
         data class ObservableStatus(val text: String) : Action()
+
         data class Custom(val text: String) : Action()
 
-        val statusMsg get() = when (this) {
-            is NewProfile -> "Duration (scroll): $duration seconds"
-            is TPSProfilerRunning ->
-                "Running for another %.1f seconds"
-                    .format(((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(0.0))
-            is TPSProfilerCompleted -> "Profiling finished, please wait..."
-            is ObservableStatus -> Component.translatable(text).string
-            is Custom -> text
-        }
+        val statusMsg
+            get() =
+                when (this) {
+                    is NewProfile -> "Duration (scroll): $duration seconds"
+                    is TPSProfilerRunning ->
+                        "Running for another %.1f seconds"
+                            .format(
+                                ((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(
+                                    0.0
+                                )
+                            )
+                    is TPSProfilerCompleted -> "Profiling finished, please wait..."
+                    is ObservableStatus -> Component.translatable(text).string
+                    is Custom -> text
+                }
     }
 
     var action: Action = Action.UNAVAILABLE
@@ -78,12 +91,16 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
     fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
         mc.setScreen(
-            ConfirmLinkScreen({ bl: Boolean ->
-                if (bl) {
-                    Util.getPlatform().openUri(dest)
-                }
-                mc.setScreen(this)
-            }, dest, true),
+            ConfirmLinkScreen(
+                { bl: Boolean ->
+                    if (bl) {
+                        Util.getPlatform().openUri(dest)
+                    }
+                    mc.setScreen(this)
+                },
+                dest,
+                true
+            )
         )
     }
 
@@ -97,11 +114,12 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             }
             Observable.LOGGER.info("GET $apiUrl")
             try {
-                val request = URL(apiUrl)
-                    .openStream()
-                    .let { GZIPInputStream(it) }
-                    .bufferedReader()
-                    .use { it.readText() }
+                val request =
+                    URL(apiUrl)
+                        .openStream()
+                        .let { GZIPInputStream(it) }
+                        .bufferedReader()
+                        .use { it.readText() }
                 Observable.RESULTS = Json.decodeFromString<DataWithDiagnostics>(request).data
                 Overlay.loadSync()
             } catch (e: Exception) {
@@ -111,14 +129,19 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             } finally {
                 getBtn.active = true
             }
-        }.start()
+        }
+            .start()
     }
 
-    fun button(x: Int, y: Int, width: Int, height: Int, component: Component, onPress: () -> Unit): Button {
-        val btn = Button.builder(component) { onPress() }
-            .pos(x, y)
-            .size(width, height)
-            .build()
+    fun button(
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        component: Component,
+        onPress: () -> Unit
+    ): Button {
+        val btn = Button.builder(component) { onPress() }.pos(x, y).size(width, height).build()
         return addRenderableWidget(btn)
     }
 
@@ -127,127 +150,130 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
         ProfileScreen.HAS_BEEN_OPENED = true
 
-        val startBtn = button(
-            0,
-            height / 2 - 48,
-            100,
-            20,
-            Component.translatable("text.observable.profile_tps"),
-        ) {
-            val duration = (action as Action.NewProfile).duration
-            Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
-        }
+        val startBtn =
+            button(
+                0,
+                height / 2 - 48,
+                100,
+                20,
+                Component.translatable("text.observable.profile_tps")
+            ) {
+                val duration = (action as Action.NewProfile).duration
+                Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
+            }
         startBtn.active = action is Action.NewProfile
         startBtn.x = width / 2 - startBtn.width - 4
 
-        fpsBtn = button(
-            width / 2 + 4,
-            startBtn.y,
-            startBtn.width,
-            startBtn.height,
-            Component.translatable("screen.observable.client_settings"),
-        ) {
-            GameInstance.getClient().setScreen(ClientSettingsGui())
-        }
-
-        val samplerBtn = addRenderableWidget(
-            BetterCheckbox(
-                startBtn.x,
-                startBtn.y + startBtn.height + 4,
-                fpsBtn.x + fpsBtn.width - startBtn.x,
-                20,
-                Component.translatable("text.observable.sampler"),
-                sample,
+        fpsBtn =
+            button(
+                width / 2 + 4,
+                startBtn.y,
+                startBtn.width,
+                startBtn.height,
+                Component.translatable("screen.observable.client_settings")
             ) {
-                sample = it
-            },
-        )
+                GameInstance.getClient().setScreen(ClientSettingsGui())
+            }
+
+        val samplerBtn =
+            addRenderableWidget(
+                BetterCheckbox(
+                    startBtn.x,
+                    startBtn.y + startBtn.height + 4,
+                    fpsBtn.x + fpsBtn.width - startBtn.x,
+                    20,
+                    Component.translatable("text.observable.sampler"),
+                    sample
+                ) {
+                    sample = it
+                }
+            )
 
         val longWidth = fpsBtn.x + fpsBtn.width - samplerBtn.x
         val smallWidth = longWidth / 3 - 2
 
         val editFieldDesc = Component.translatable("text.observable.get_field")
-        editField = addRenderableWidget(
-            EditBox(
-                GameInstance.getClient().font,
-                samplerBtn.x,
-                samplerBtn.y + samplerBtn.height + 16,
-                smallWidth * 2,
-                20,
-                editFieldDesc,
-            ),
-        )
+        editField =
+            addRenderableWidget(
+                EditBox(
+                    GameInstance.getClient().font,
+                    samplerBtn.x,
+                    samplerBtn.y + samplerBtn.height + 16,
+                    smallWidth * 2,
+                    20,
+                    editFieldDesc
+                )
+            )
         editField.setSuggestion(editFieldDesc.string)
         editField.setResponder {
             editField.setSuggestion(if (it.isEmpty()) editFieldDesc.string else "")
         }
 
-        getBtn = button(
-            editField.x + editField.width + 8,
-            editField.y,
-            smallWidth,
-            20,
-            Component.translatable("text.observable.get_btn"),
-        ) {
-            getData(editField.value)
-        }
-
-        overlayBtn = addRenderableWidget(
-            BetterCheckbox(
-                editField.x,
-                editField.y + editField.height + 4,
-                editField.width,
+        getBtn =
+            button(
+                editField.x + editField.width + 8,
+                editField.y,
+                smallWidth,
                 20,
-                Component.translatable("text.observable.overlay"),
-                Overlay.enabled,
+                Component.translatable("text.observable.get_btn")
             ) {
-                if (it) {
-                    synchronized(Overlay) {
-                        Overlay.load()
+                getData(editField.value)
+            }
+
+        overlayBtn =
+            addRenderableWidget(
+                BetterCheckbox(
+                    editField.x,
+                    editField.y + editField.height + 4,
+                    editField.width,
+                    20,
+                    Component.translatable("text.observable.overlay"),
+                    Overlay.enabled
+                ) {
+                    if (it) {
+                        synchronized(Overlay) { Overlay.load() }
                     }
+                    Overlay.enabled = it
                 }
-                Overlay.enabled = it
-            },
-        )
+            )
 
         if (Observable.RESULTS == null) {
-            arrayOf(editField, overlayBtn).forEach {
-                it.active = false
-            }
+            arrayOf(editField, overlayBtn).forEach { it.active = false }
         }
 
-        val learnBtn = button(
-            startBtn.x,
-            overlayBtn.y + overlayBtn.height + 8,
-            smallWidth,
-            20,
-            Component.translatable("text.observable.docs"),
-        ) {
-            openLink("https://github.com/tasgon/observable/wiki")
-        }
-        val helpBtn = button(
-            learnBtn.x + learnBtn.width + 4,
-            learnBtn.y,
-            smallWidth,
-            20,
-            Component.translatable("text.observable.discord"),
-        ) {
-            openLink("https://discord.gg/sfPbb3b5tF")
-        }
-        val donateBtn = button(
-            helpBtn.x + helpBtn.width + 4,
-            helpBtn.y,
-            smallWidth,
-            20,
-            Component.translatable("text.observable.donate"),
-        ) {
-            openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
-        }
+        val learnBtn =
+            button(
+                startBtn.x,
+                overlayBtn.y + overlayBtn.height + 8,
+                smallWidth,
+                20,
+                Component.translatable("text.observable.docs")
+            ) {
+                openLink("https://github.com/tasgon/observable/wiki")
+            }
+        val helpBtn =
+            button(
+                learnBtn.x + learnBtn.width + 4,
+                learnBtn.y,
+                smallWidth,
+                20,
+                Component.translatable("text.observable.discord")
+            ) {
+                openLink("https://discord.gg/sfPbb3b5tF")
+            }
+        val donateBtn =
+            button(
+                helpBtn.x + helpBtn.width + 4,
+                helpBtn.y,
+                smallWidth,
+                20,
+                Component.translatable("text.observable.donate")
+            ) {
+                openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
+            }
 
         this.startBtn = startBtn
-        if (action == Action.UNAVAILABLE ||
-            action == Action.NO_PERMISSIONS
-        ) {
+        if (action == Action.UNAVAILABLE || action == Action.NO_PERMISSIONS) {
             Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
         }
     }
@@ -261,7 +287,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             action.statusMsg,
             width / 2,
             startBtn!!.y - this.font.lineHeight - 4,
-            0xFFFFFF,
+            0xFFFFFF
         )
 
         super.render(poseStack, i, j, f)
