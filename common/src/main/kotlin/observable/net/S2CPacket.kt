@@ -2,7 +2,6 @@ package observable.net
 
 import kotlinx.serialization.Serializable
 import observable.server.ProfilingData
-import java.util.*
 
 class S2CPacket {
     @Serializable data class ProfilingStarted(val endMillis: Long)
@@ -11,7 +10,7 @@ class S2CPacket {
 
     @Serializable object ProfilerInactive
 
-    @Serializable data class ProfilingResult(val data: ProfilingData)
+    @Serializable data class ProfilingResult(val data: ProfilingData, val link: String?)
 
     @Serializable
     enum class Availability {

@@ -29,6 +29,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import observable.client.Overlay
+import observable.client.ProfileExporter
 import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
@@ -37,7 +38,10 @@ import observable.server.Profiler
 import observable.server.ProfilingData
 import observable.server.ServerSettings
 import observable.server.TypeMap
+import observable.util.MOD_URL_COMPONENT
+import observable.util.Marker
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.lwjgl.glfw.GLFW
 
 object Observable {
@@ -47,13 +51,15 @@ object Observable {
         KeyMapping(
             "key.observable.profile",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_R,
+            GLFW.GLFW_KEY_UNKNOWN,
             "category.observable.keybinds"
         )
     }
 
+    private val CLIENT_CHAT get() = GameInstance.getClient().gui.chat
+
     val CHANNEL = BetterChannel(ResourceLocation("channel/observable"))
-    val LOGGER = LogManager.getLogger("Observable")
+    val LOGGER: Logger = LogManager.getLogger("Observable")
     val PROFILER: Profiler by lazy { Profiler() }
     var RESULTS: ProfilingData? = null
     val PROFILE_SCREEN by lazy { ProfileScreen() }
@@ -74,18 +80,12 @@ object Observable {
                 return@register
             }
             if (PROFILER.notProcessing) {
-                PROFILER.runWithDuration(player as? ServerPlayer, t.duration, t.sample) { result ->
-                    player.sendSystemMessage(result)
-                }
+                PROFILER.runWithDuration(player as? ServerPlayer, t.duration, t.sample)
             }
             LOGGER.info("${player.gameProfile.name} started profiler for ${t.duration} s")
         }
 
-        CHANNEL.register { t: C2SPacket.RequestTeleport, supplier ->
-            println("Using an in-game teleport command has been deprecated")
-        }
-
-        CHANNEL.register { t: C2SPacket.RequestAvailability, supplier ->
+        CHANNEL.register { _: C2SPacket.RequestAvailability, supplier ->
             (supplier.get().player as? ServerPlayer)?.let {
                 CHANNEL.sendToPlayer(
                     it,
@@ -98,33 +98,45 @@ object Observable {
             }
         }
 
-        CHANNEL.register { t: S2CPacket.ProfilingStarted, supplier ->
+        CHANNEL.register { t: S2CPacket.ProfilingStarted, _ ->
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerRunning(t.endMillis)
             PROFILE_SCREEN.startBtn?.active = false
         }
 
-        CHANNEL.register { t: S2CPacket.ProfilingCompleted, supplier ->
+        CHANNEL.register { _: S2CPacket.ProfilingCompleted, _ ->
             PROFILE_SCREEN.action = ProfileScreen.Action.TPSProfilerCompleted
         }
 
-        CHANNEL.register { t: S2CPacket.ProfilerInactive, supplier ->
+        CHANNEL.register { _: S2CPacket.ProfilerInactive, _ ->
             PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
             PROFILE_SCREEN.startBtn?.active = true
         }
 
-        CHANNEL.register { t: S2CPacket.ProfilingResult, supplier ->
+        CHANNEL.register { t: S2CPacket.ProfilingResult, _ ->
             RESULTS = t.data
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
                 startBtn?.active = true
                 arrayOf(editField, overlayBtn).forEach { it.active = true }
             }
-            val data = t.data.entities
-            LOGGER.info("Received profiling result with ${data.size} entries")
             Overlay.loadSync()
+
+            if (t.link != null) {
+                val linkText = Component.literal(t.link).withStyle(ChatFormatting.UNDERLINE).withStyle {
+                    it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, t.link))
+                }
+                val msg = Component.translatable("text.observable.profile_uploaded", linkText)
+                CLIENT_CHAT.addMessage(msg)
+            } else {
+                CLIENT_CHAT.addMessage(Component.translatable("text.observable.upload_failed"))
+                CLIENT_CHAT.addMessage(
+                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data))
+                )
+                CLIENT_CHAT.addMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT))
+            }
         }
 
-        CHANNEL.register { t: S2CPacket.Availability, supplier ->
+        CHANNEL.register { t: S2CPacket.Availability, _ ->
             when (t) {
                 S2CPacket.Availability.Available -> {
                     PROFILE_SCREEN.action = ProfileScreen.Action.DEFAULT
@@ -137,41 +149,13 @@ object Observable {
             }
         }
 
-        CHANNEL.register { t: S2CPacket.ConsiderProfiling, supplier ->
-            if (ProfileScreen.HAS_BEEN_OPENED) return@register
-            Observable.LOGGER.info("Notifying player")
-            val tps = "%.2f".format(t.tps)
-            GameInstance.getClient()
-                .gui
-                .chat
-                .addMessage(
-                    Component.translatable(
-                        "text.observable.suggest",
-                        tps,
-                        Component.translatable("text.observable.suggest_action")
-                            .withStyle(ChatFormatting.UNDERLINE)
-                            .withStyle {
-                                it.withClickEvent(
-                                    object : ClickEvent(null, "") {
-                                        override fun getAction(): Action? {
-                                            GameInstance.getClient().setScreen(PROFILE_SCREEN)
-                                            return null
-                                        }
-                                    }
-                                )
-                            }
-                    )
-                )
-        }
-
         LifecycleEvent.SERVER_STARTED.register {
             val thread = Thread.currentThread()
             PROFILER.serverThread = thread
-            //            ContinuousPerfEval.start()
             LOGGER.info("Registered thread ${thread.name}")
         }
 
-        CommandRegistrationEvent.EVENT.register { dispatcher, ctx, selection ->
+        CommandRegistrationEvent.EVENT.register { dispatcher, _, _ ->
             val cmd =
                 literal("observable")
                     .requires { it.hasPermission(4) }
@@ -184,9 +168,7 @@ object Observable {
                             .then(
                                 argument("duration", integer()).executes { ctx ->
                                     val duration = getInteger(ctx, "duration")
-                                    PROFILER.runWithDuration(ctx.source.player, duration, false) { result ->
-                                        ctx.source.sendSuccess(result, false)
-                                    }
+                                    PROFILER.runWithDuration(ctx.source.player, duration, false)
                                     ctx.source.sendSuccess(
                                         Component.translatable("text.observable.profile_started", duration),
                                         false
@@ -318,7 +300,17 @@ object Observable {
             }
         }
 
-        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { Overlay.loadSync(it) }
+        ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { level ->
+            Overlay.loadSync(level)
+            Marker("observable_announce").mark {
+                CLIENT_CHAT.addMessage(
+                    Component.translatable(
+                        "text.observable.announce",
+                        MOD_URL_COMPONENT
+                    )
+                )
+            }
+        }
 
         ClientPlayerEvent.CLIENT_PLAYER_QUIT.register {
             RESULTS = null

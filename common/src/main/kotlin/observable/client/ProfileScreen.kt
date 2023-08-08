@@ -15,29 +15,11 @@ import net.minecraft.network.chat.Component
 import observable.Observable
 import observable.net.C2SPacket
 import observable.server.DataWithDiagnostics
-import java.io.File
 import java.net.URL
 import java.util.zip.GZIPInputStream
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
-    companion object {
-        private val STATUS_FILE
-            get() = File("o_prof")
-
-        var HAS_BEEN_OPENED = STATUS_FILE.exists()
-            private set(value) {
-                if (value && !field) {
-                    try {
-                        STATUS_FILE.createNewFile()
-                    } catch (e: Exception) {
-                        Observable.LOGGER.warn("Could not create status file: ${e.message}")
-                        e.printStackTrace()
-                    }
-                }
-                field = value
-            }
-    }
 
     init {
         this.init()
@@ -147,8 +129,6 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
     override fun init() {
         super.init()
-
-        ProfileScreen.HAS_BEEN_OPENED = true
 
         val startBtn =
             button(

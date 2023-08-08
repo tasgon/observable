@@ -4,7 +4,6 @@ import dev.architectury.utils.GameInstance
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.*
@@ -121,8 +120,7 @@ class Profiler {
     fun runWithDuration(
         player: ServerPlayer?,
         duration: Int,
-        sample: Boolean,
-        onComplete: (Component) -> Unit
+        sample: Boolean
     ) {
         this.player = player
         startRunning(sample)
@@ -132,12 +130,11 @@ class Profiler {
             S2CPacket.ProfilingStarted(startTime + durMs)
         )
         Timer("Profiler", false).schedule(durMs) {
-            val result = stopRunning()
-            onComplete(result)
+            stopRunning()
         }
     }
 
-    fun uploadProfile(data: ProfilingData, diagnostics: JsonObject): Component {
+    fun uploadProfile(data: ProfilingData, diagnostics: JsonObject): String? {
         Observable.LOGGER.info("Attempting to upload profile")
         val serialized = Json.encodeToString(DataWithDiagnostics(data, diagnostics))
 
@@ -152,19 +149,15 @@ class Profiler {
 
             val profileURL = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             Observable.LOGGER.info("Profile uploaded to $profileURL")
-            val link =
-                Component.literal(profileURL).withStyle(ChatFormatting.UNDERLINE).withStyle {
-                    it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, profileURL))
-                }
 
-            Component.translatable("text.observable.profile_uploaded", link)
+            profileURL
         } catch (e: Exception) {
             e.printStackTrace()
-            Component.translatable("text.observable.upload_failed")
+            null
         }
     }
 
-    fun stopRunning(): Component {
+    fun stopRunning() {
         val diagnostics = getDiagnostics()
         val ticks: Int
         synchronized(Props.notProcessing) {
@@ -176,14 +169,13 @@ class Profiler {
         val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, serverTraceMap)
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
         Observable.LOGGER.info("Sending to ${players.map { it.gameProfile.name }}")
-        Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data))
-        val result = uploadProfile(data, diagnostics)
+        val link = uploadProfile(data, diagnostics)
+        Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data, link))
         Observable.LOGGER.info("Data transfer complete!")
         GameInstance.getServer()
             ?.playerList
             ?.players
             ?.filter { Observable.hasPermission(it) }
             ?.let { Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive) }
-        return result
     }
 }

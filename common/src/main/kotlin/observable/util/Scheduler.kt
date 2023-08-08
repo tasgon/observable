@@ -1,4 +1,4 @@
-package observable
+package observable.util
 
 import dev.architectury.event.events.common.TickEvent
 
