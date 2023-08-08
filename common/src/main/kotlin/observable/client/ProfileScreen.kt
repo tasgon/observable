@@ -2,21 +2,15 @@ package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
 import dev.architectury.utils.GameInstance
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import net.minecraft.Util
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Button
-import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import observable.Observable
 import observable.net.C2SPacket
-import observable.server.DataWithDiagnostics
-import java.net.URL
-import java.util.zip.GZIPInputStream
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
@@ -62,15 +56,9 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
     var action: Action = Action.UNAVAILABLE
     var startBtn: Button? = null
     var sample = false
-    lateinit var fpsBtn: Button
-    lateinit var editField: EditBox
-    lateinit var getBtn: Button
     lateinit var overlayBtn: BetterCheckbox
 
-    val fpsText = Component.translatable("text.observable.profile_fps")
-    val unimplementedText = Component.translatable("text.observable.unimplemented")
-
-    fun openLink(dest: String) {
+    private fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
         mc.setScreen(
             ConfirmLinkScreen(
@@ -86,36 +74,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         )
     }
 
-    fun getData(url: String) {
-        getBtn.active = false
-        Thread {
-            var apiUrl = url
-            if (url.contains('#')) {
-                val hash = url.split('#').last()
-                apiUrl = "https://observable.tas.sh/get/$hash"
-            }
-            Observable.LOGGER.info("GET $apiUrl")
-            try {
-                val request =
-                    URL(apiUrl)
-                        .openStream()
-                        .let { GZIPInputStream(it) }
-                        .bufferedReader()
-                        .use { it.readText() }
-                Observable.RESULTS = Json.decodeFromString<DataWithDiagnostics>(request).data
-                Overlay.loadSync()
-            } catch (e: Exception) {
-                Observable.LOGGER.error("Profile download error", e)
-                val errMsg = Component.literal("Error: ${e.message}")
-                GameInstance.getClient().player?.displayClientMessage(errMsg, true)
-            } finally {
-                getBtn.active = true
-            }
-        }
-            .start()
-    }
-
-    fun button(
+    private fun button(
         x: Int,
         y: Int,
         width: Int,
@@ -144,7 +103,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         startBtn.active = action is Action.NewProfile
         startBtn.x = width / 2 - startBtn.width - 4
 
-        fpsBtn =
+        val settingsBtn =
             button(
                 width / 2 + 4,
                 startBtn.y,
@@ -160,7 +119,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 BetterCheckbox(
                     startBtn.x,
                     startBtn.y + startBtn.height + 4,
-                    fpsBtn.x + fpsBtn.width - startBtn.x,
+                    settingsBtn.x + settingsBtn.width - startBtn.x,
                     20,
                     Component.translatable("text.observable.sampler"),
                     sample
@@ -169,43 +128,15 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 }
             )
 
-        val longWidth = fpsBtn.x + fpsBtn.width - samplerBtn.x
+        val longWidth = settingsBtn.x + settingsBtn.width - samplerBtn.x
         val smallWidth = longWidth / 3 - 2
-
-        val editFieldDesc = Component.translatable("text.observable.get_field")
-        editField =
-            addRenderableWidget(
-                EditBox(
-                    GameInstance.getClient().font,
-                    samplerBtn.x,
-                    samplerBtn.y + samplerBtn.height + 16,
-                    smallWidth * 2,
-                    20,
-                    editFieldDesc
-                )
-            )
-        editField.setSuggestion(editFieldDesc.string)
-        editField.setResponder {
-            editField.setSuggestion(if (it.isEmpty()) editFieldDesc.string else "")
-        }
-
-        getBtn =
-            button(
-                editField.x + editField.width + 8,
-                editField.y,
-                smallWidth,
-                20,
-                Component.translatable("text.observable.get_btn")
-            ) {
-                getData(editField.value)
-            }
 
         overlayBtn =
             addRenderableWidget(
                 BetterCheckbox(
-                    editField.x,
-                    editField.y + editField.height + 4,
-                    editField.width,
+                    samplerBtn.x,
+                    samplerBtn.y + samplerBtn.height + 4,
+                    samplerBtn.width,
                     20,
                     Component.translatable("text.observable.overlay"),
                     Overlay.enabled
@@ -218,7 +149,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             )
 
         if (Observable.RESULTS == null) {
-            arrayOf(editField, overlayBtn).forEach { it.active = false }
+            arrayOf(overlayBtn).forEach { it.active = false }
         }
 
         val learnBtn =

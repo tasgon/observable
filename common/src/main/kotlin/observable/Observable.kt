@@ -104,7 +104,7 @@ object Observable {
             PROFILE_SCREEN.apply {
                 action = ProfileScreen.Action.DEFAULT
                 startBtn?.active = true
-                arrayOf(editField, overlayBtn).forEach { it.active = true }
+                arrayOf(overlayBtn).forEach { it.active = true }
             }
             Overlay.loadSync()
 
