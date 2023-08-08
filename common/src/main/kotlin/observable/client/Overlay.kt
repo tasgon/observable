@@ -82,13 +82,12 @@ object Overlay {
             fun build(): RenderType {
                 val boolType = java.lang.Boolean.TYPE
 
-                // So here's the thing: for some reason, Minecraft decided to not allow any kind of external
-                // access to
-                // create a custom RenderType outside of the class. However, we need to make our own to have
-                // the block
-                // outlines visible through walls. We can't mixin an invoker either as the
-                // CompositeRenderType is private
-                // within RenderType. We can get around that using reflection, hence this monstrosity.
+                // So here's the thing: for some reason, Minecraft decided to not allow
+                // any kind of external access to  create a custom RenderType outside
+                // the class. However, we need to make our own to have the block outlines
+                // visible through walls. We can't mixin an invoker either as the
+                // CompositeRenderType is private within RenderType.
+                // We can get around that using reflection, hence this monstrosity.
                 val parameterTypes =
                     arrayOf(
                         String::class.java,

@@ -1,9 +1,6 @@
 package observable
 
 import com.mojang.blaze3d.platform.InputConstants
-import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
-import com.mojang.brigadier.arguments.IntegerArgumentType.integer
-import com.mojang.brigadier.context.CommandContext
 import dev.architectury.event.events.client.ClientLifecycleEvent
 import dev.architectury.event.events.client.ClientPlayerEvent
 import dev.architectury.event.events.client.ClientTickEvent
@@ -13,31 +10,21 @@ import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
-import net.minecraft.commands.CommandSourceStack
-import net.minecraft.commands.Commands.argument
-import net.minecraft.commands.Commands.literal
-import net.minecraft.commands.arguments.DimensionArgument.dimension
-import net.minecraft.commands.arguments.DimensionArgument.getDimension
-import net.minecraft.commands.arguments.GameProfileArgument.gameProfile
-import net.minecraft.commands.arguments.GameProfileArgument.getGameProfiles
-import net.minecraft.commands.arguments.coordinates.Vec3Argument.getVec3
-import net.minecraft.commands.arguments.coordinates.Vec3Argument.vec3
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.phys.Vec3
 import observable.client.Overlay
 import observable.client.ProfileExporter
 import observable.client.ProfileScreen
 import observable.net.BetterChannel
 import observable.net.C2SPacket
 import observable.net.S2CPacket
+import observable.server.OBSERVABLE_COMMAND
 import observable.server.Profiler
 import observable.server.ProfilingData
 import observable.server.ServerSettings
-import observable.server.TypeMap
 import observable.util.MOD_URL_COMPONENT
 import observable.util.Marker
 import org.apache.logging.log4j.LogManager
@@ -156,138 +143,8 @@ object Observable {
         }
 
         CommandRegistrationEvent.EVENT.register { dispatcher, _, _ ->
-            val cmd =
-                literal("observable")
-                    .requires { it.hasPermission(4) }
-                    .executes {
-                        it.source.sendSuccess(Component.literal(ServerSettings.toString()), false)
-                        1
-                    }
-                    .then(
-                        literal("run")
-                            .then(
-                                argument("duration", integer()).executes { ctx ->
-                                    val duration = getInteger(ctx, "duration")
-                                    PROFILER.runWithDuration(ctx.source.player, duration, false)
-                                    ctx.source.sendSuccess(
-                                        Component.translatable("text.observable.profile_started", duration),
-                                        false
-                                    )
-                                    1
-                                }
-                            )
-                    )
-                    .then(
-                        literal("allow")
-                            .then(
-                                argument("player", gameProfile()).executes { ctx ->
-                                    getGameProfiles(ctx, "player").forEach { player ->
-                                        ServerSettings.allowedPlayers.add(player.id.toString())
-                                        GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
-                                            CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
-                                        }
-                                    }
-                                    ServerSettings.sync()
-                                    1
-                                }
-                            )
-                    )
-                    .then(
-                        literal("deny")
-                            .then(
-                                argument("player", gameProfile()).executes { ctx ->
-                                    getGameProfiles(ctx, "player").forEach { player ->
-                                        ServerSettings.allowedPlayers.remove(player.id.toString())
-                                        GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
-                                            CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
-                                        }
-                                    }
-                                    ServerSettings.sync()
-                                    1
-                                }
-                            )
-                    )
-                    .then(
-                        literal("set").let {
-                            ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
-                                val argType = TypeMap[field.type] ?: return@fold setCmd
-                                setCmd.then(
-                                    literal(field.name)
-                                        .then(
-                                            argument("newVal", argType()).executes { ctx ->
-                                                try {
-                                                    field.isAccessible = true
-                                                    field.set(
-                                                        ServerSettings,
-                                                        ctx.getArgument("newVal", field.type)
-                                                    )
-                                                    ServerSettings.sync()
-                                                    1
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
-                                                    ctx.source.sendFailure(
-                                                        Component.literal("Error setting value\n$e")
-                                                    )
-                                                    0
-                                                }
-                                            }
-                                        )
-                                )
-                            }
-                        }
-                    )
-                    .then(
-                        literal("tp")
-                            .then(
-                                argument("dim", dimension())
-                                    .then(
-                                        literal("entity")
-                                            .then(
-                                                argument("id", integer()).executes { ctx ->
-                                                    val level = getDimension(ctx, "dim")
-                                                    val id = getInteger(ctx, "id")
-                                                    val pos =
-                                                        level.getEntity(id)?.position()
-                                                            ?: run {
-                                                                ctx.source.sendFailure(
-                                                                    Component.translatable(
-                                                                        "text.observable.entity_not_found"
-                                                                    )
-                                                                )
-                                                                return@executes 0
-                                                            }
-                                                    teleport(ctx, pos)
-                                                    1
-                                                }
-                                            )
-                                    )
-                                    .then(
-                                        literal("position")
-                                            .then(
-                                                argument("pos", vec3()).executes { ctx ->
-                                                    teleport(ctx, getVec3(ctx, "pos"))
-                                                    1
-                                                }
-                                            )
-                                    )
-                            )
-                    )
-
-            dispatcher.register(cmd)
+            dispatcher.register(OBSERVABLE_COMMAND)
         }
-    }
-
-    fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
-        val player = ctx.source.playerOrException
-        val level = getDimension(ctx, "dim")
-
-        player.teleportTo(pos.x, pos.y, pos.z)
-        if (level == player.level) {
-            player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
-        } else {
-            player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)
-        }
-        LOGGER.info("Moved ${player.gameProfile.name} to (${pos.x}, ${pos.y}, ${pos.z}) in $level")
     }
 
     @JvmStatic

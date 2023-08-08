@@ -6,7 +6,6 @@ import kotlin.random.Random
 
 /** Tagged stack trace sampler. */
 class TaggedSampler(val thread: Thread) : Runnable {
-    data class Sample(val target: Profiler.TimingData?, val trace: Array<StackTraceElement>)
 
     override fun run() {
         Observable.LOGGER.info("Started sampler thread")
