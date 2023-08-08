@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: ktlint
         name: ktlint
-        files: .*.kt
+        files: .*\.(kt|gradle)
         entry: bash -c "./gradlew ktlintFormat"
         language: system
         pass_filenames: false
