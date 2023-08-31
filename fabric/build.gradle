@@ -44,7 +44,7 @@ dependencies {
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) {
         transitive = false
     }
-    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:1.3.1") {
+    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version") {
         transitive = false
     }
 }
@@ -59,7 +59,7 @@ processResources {
 
 shadowJar {
     configurations = [project.configurations.shadowCommon]
-    classifier "dev-shadow"
+    archiveClassifier = "dev-shadow"
 
     relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
 }
@@ -67,11 +67,11 @@ shadowJar {
 remapJar {
     input.set shadowJar.archiveFile
     dependsOn shadowJar
-    classifier null
+    archiveClassifier = null
 }
 
 jar {
-    classifier "dev"
+    archiveClassifier = "dev"
 }
 
 java {
@@ -133,7 +133,7 @@ publishing {
             artifactId = rootProject.archives_base_name + "-" + project.name
             // add all the jars that should be included when publishing to maven
             artifact(remapJar) {
-                classifier null
+                classifier = null
             }
             artifact(sourcesJar) {
                 builtBy remapSourcesJar
@@ -150,12 +150,8 @@ repositories {
     mavenCentral()
 }
 compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    kotlinOptions.jvmTarget = "17"
 }
 compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    kotlinOptions.jvmTarget = "17"
 }

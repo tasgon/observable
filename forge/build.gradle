@@ -46,9 +46,9 @@ dependencies {
         transitive = false
     }
 
-    forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.10")
-    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:1.3.1")
-    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+    forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version")
+    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlin_serialization_version")
 }
 
 processResources {
@@ -65,7 +65,7 @@ shadowJar {
     exclude "fabric.mod.json"
 
     configurations = [project.configurations.shadowCommon]
-    classifier "dev-shadow"
+    archiveClassifier =  "dev-shadow"
 
     exclude "**/*.kotlin_metadata"
 
@@ -73,13 +73,13 @@ shadowJar {
 }
 
 remapJar {
-    input.set shadowJar.archiveFile
+    inputFile.set shadowJar.archiveFile
     dependsOn shadowJar
-    classifier null
+    archiveClassifier = null
 }
 
 jar {
-    classifier "dev"
+    archiveClassifier = "dev"
 }
 
 java {
@@ -155,15 +155,10 @@ publishing {
 }
 repositories {
     mavenCentral()
-
 }
 compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    kotlinOptions.jvmTarget = "17"
 }
 compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    kotlinOptions.jvmTarget = "17"
 }
