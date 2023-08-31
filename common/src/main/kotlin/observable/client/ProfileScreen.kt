@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import dev.architectury.utils.GameInstance
 import net.minecraft.Util
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiComponent
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
@@ -191,9 +191,8 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
     override fun isPauseScreen() = false
 
-    override fun render(poseStack: PoseStack, i: Int, j: Int, f: Float) {
-        GuiComponent.drawCenteredString(
-            poseStack,
+    override fun render(graphics: GuiGraphics, i: Int, j: Int, f: Float) {
+        graphics.drawCenteredString(
             this.font,
             action.statusMsg,
             width / 2,
@@ -201,7 +200,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             0xFFFFFF
         )
 
-        super.render(poseStack, i, j, f)
+        super.render(graphics, i, j, f)
     }
 
     override fun mouseScrolled(d: Double, e: Double, f: Double): Boolean {

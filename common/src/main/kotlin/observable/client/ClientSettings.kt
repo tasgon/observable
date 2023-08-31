@@ -2,7 +2,7 @@ package observable.client
 
 import com.mojang.blaze3d.vertex.PoseStack
 import dev.architectury.utils.GameInstance
-import net.minecraft.client.gui.GuiComponent
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
@@ -82,10 +82,9 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
         )
     }
 
-    override fun render(poseStack: PoseStack, i: Int, j: Int, f: Float) {
+    override fun render(graphics: GuiGraphics, i: Int, j: Int, f: Float) {
         for ((field, entry) in fields.zip(this.children())) {
-            GuiComponent.drawString(
-                poseStack,
+            graphics.drawString(
                 this.font,
                 field,
                 width / 4,
@@ -94,6 +93,6 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
             )
         }
 
-        super.render(poseStack, i, j, f)
+        super.render(graphics, i, j, f)
     }
 }

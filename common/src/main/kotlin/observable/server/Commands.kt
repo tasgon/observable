@@ -18,7 +18,7 @@ val OBSERVABLE_COMMAND
         Commands.literal("observable")
             .requires { it.hasPermission(4) }
             .executes {
-                it.source.sendSuccess(Component.literal(ServerSettings.toString()), false)
+                it.source.sendSuccess({ Component.literal(ServerSettings.toString()) }, false)
                 1
             }
             .then(
@@ -28,7 +28,7 @@ val OBSERVABLE_COMMAND
                             val duration = IntegerArgumentType.getInteger(ctx, "duration")
                             Observable.PROFILER.runWithDuration(ctx.source.player, duration, false)
                             ctx.source.sendSuccess(
-                                Component.translatable("text.observable.profile_started", duration),
+                                { Component.translatable("text.observable.profile_started", duration) },
                                 false
                             )
                             1
@@ -136,7 +136,7 @@ fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
     val level = DimensionArgument.getDimension(ctx, "dim")
 
     player.teleportTo(pos.x, pos.y, pos.z)
-    if (level == player.level) {
+    if (level == player.level()) {
         player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
     } else {
         player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.*
 import net.minecraft.client.Camera
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.Font.DisplayMode
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.MultiBufferSource
@@ -225,7 +226,6 @@ object Overlay {
 
             vertexBuf?.let {
                 RenderSystem.setShader { GameRenderer.getPositionColorShader() }
-                RenderSystem.disableTexture()
                 it.bind()
                 it.drawWithShader(
                     poseStack.last().pose(),
@@ -233,7 +233,6 @@ object Overlay {
                     GameRenderer.getPositionColorShader()!!
                 )
                 VertexBuffer.unbind()
-                RenderSystem.enableTexture()
             }
         }
 
@@ -257,7 +256,7 @@ object Overlay {
         }
 
         val rendered = buf.end()
-        val vbuf = VertexBuffer()
+        val vbuf = VertexBuffer(VertexBuffer.Usage.DYNAMIC)
         vbuf.bind()
         vbuf.upload(rendered)
         VertexBuffer.unbind()
@@ -306,7 +305,7 @@ object Overlay {
                 false,
                 poseStack.last().pose(),
                 bufSrc,
-                true,
+                DisplayMode.SEE_THROUGH,
                 0,
                 0xF000F0
             )
@@ -383,7 +382,7 @@ object Overlay {
                 false,
                 poseStack.last().pose(),
                 bufSrc,
-                true,
+                DisplayMode.SEE_THROUGH,
                 0,
                 0xF000F0
             )

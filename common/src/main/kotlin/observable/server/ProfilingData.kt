@@ -20,7 +20,7 @@ import observable.net.*
 
 fun getPosition(obj: Any?): BlockPos =
     when (obj) {
-        is Entity -> BlockPos(obj.position())
+        is Entity -> obj.blockPosition()
         is BlockPos -> obj
         else -> BlockPos.ZERO
     }
@@ -42,7 +42,7 @@ data class ProfilingData(
             val entityEntries =
                 entities
                     .asIterable()
-                    .groupBy { it.key.level.dimension().location() }
+                    .groupBy { it.key.level().dimension().location() }
                     .mapValues { (_, entries) ->
                         entries.map { (entity, data) ->
                             Entry(entity, BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString(), data)
