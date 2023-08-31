@@ -103,6 +103,10 @@ unifiedPublishing {
                 curseforge = "architectury-api"
                 modrinth = "architectury-api"
             }
+            depends {
+                curseforge = "fabric-language-kotlin"
+                modrinth = "fabric-language-kotlin"
+            }
         }
 
         var CURSE_API_KEY = project.findProperty("CURSE_API_KEY") ?: System.getenv("CURSE_API_KEY")
