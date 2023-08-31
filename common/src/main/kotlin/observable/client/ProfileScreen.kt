@@ -1,6 +1,5 @@
 package observable.client
 
-import com.mojang.blaze3d.vertex.PoseStack
 import dev.architectury.utils.GameInstance
 import net.minecraft.Util
 import net.minecraft.client.Minecraft
