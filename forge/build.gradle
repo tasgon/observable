@@ -46,7 +46,7 @@ dependencies {
         transitive = false
     }
 
-    forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+    forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
     forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version")
     forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlin_serialization_version")
 }

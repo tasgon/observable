@@ -47,7 +47,7 @@ subprojects {
         mappings loom.officialMojangMappings()
         // The following line declares the yarn mappings you may select this one as well.
         // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
-        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+        implementation "org.jetbrains.kotlin:kotlin-stdlib"
         implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlin_serialization_version"
         implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlin_serialization_version"
     }
@@ -92,7 +92,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 compileKotlin {
     kotlinOptions {
