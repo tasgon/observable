@@ -14,10 +14,6 @@ import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
 
-    init {
-        this.init()
-    }
-
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
@@ -29,7 +25,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
         data class TPSProfilerRunning(val endTime: Long) : Action()
 
-        object TPSProfilerCompleted : Action()
+        data object TPSProfilerCompleted : Action()
 
         data class ObservableStatus(val text: String) : Action()
 
@@ -55,7 +51,6 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
     var action: Action = Action.UNAVAILABLE
     var startBtn: Button? = null
     var sample = false
-    lateinit var overlayBtn: BetterCheckbox
 
     private fun openLink(dest: String) {
         val mc = Minecraft.getInstance()
@@ -130,7 +125,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         val longWidth = settingsBtn.x + settingsBtn.width - samplerBtn.x
         val smallWidth = longWidth / 3 - 2
 
-        overlayBtn =
+        val overlayBtn =
             addRenderableWidget(
                 BetterCheckbox(
                     samplerBtn.x,
@@ -146,10 +141,6 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                     Overlay.enabled = it
                 }
             )
-
-        if (Observable.RESULTS == null) {
-            arrayOf(overlayBtn).forEach { it.active = false }
-        }
 
         val learnBtn =
             button(
@@ -183,9 +174,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             }
 
         this.startBtn = startBtn
-        if (action == Action.UNAVAILABLE || action == Action.NO_PERMISSIONS) {
-            Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
-        }
+        Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
     }
 
     override fun isPauseScreen() = false
