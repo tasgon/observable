@@ -23,7 +23,8 @@ data class ServerSettingsData(
     var deviation: Int = 1,
     var notifyInterval: Int = 120 * 60 * 1000,
     var allPlayersAllowed: Boolean = false,
-    var allowedPlayers: MutableSet<String> = mutableSetOf()
+    var allowedPlayers: MutableSet<String> = mutableSetOf(),
+    var includeJvmArgs: Boolean = true
 ) {
     fun sync() = configFile.writeText(Json.encodeToString(this))
 }
