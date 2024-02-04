@@ -2,7 +2,7 @@
 
 # observable -- see what's lagging your server
 
-This is a spiritual successor to [LagGoggles](https://www.curseforge.com/minecraft/mc-mods/laggoggles) for Minecraft 1.16 - 1.19 (and hopefully later versions). Licensed under MPLv2.
+This is a spiritual successor to [LagGoggles](https://www.curseforge.com/minecraft/mc-mods/laggoggles) for Minecraft 1.16 - 1.20 (and hopefully later versions). Licensed under MPLv2.
 
 See [CurseForge](https://www.curseforge.com/minecraft/mc-mods/observable) for download links.
 
