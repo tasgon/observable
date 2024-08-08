@@ -62,6 +62,7 @@ object Overlay {
     var blockMap = mapOf<ChunkPos, List<Entry.BlockEntry>>()
     lateinit var loc: Vec3
     var vertexBuf: VertexBuffer? = null
+    var vertexBufPosition: Vec3 = Vec3.ZERO
     var dataAvailable = false
 
     val DIST_FAC = 1.0 / (2 * 16.0.pow(2)).pow(.5)
@@ -197,12 +198,10 @@ object Overlay {
 
         poseStack.pushPose()
 
-        if (dataAvailable) {
+        if (dataAvailable || vertexBufPosition.distanceToSqr(camera.position) > 1_000_000) {
             createVBO(camera)
             dataAvailable = false
         }
-
-        camera.position.apply { poseStack.translate(-x, -y, -z) }
 
         synchronized(this) {
             val cpos = ChunkPos(Minecraft.getInstance().player!!.blockPosition())
@@ -224,6 +223,8 @@ object Overlay {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
+            val p = vertexBufPosition.subtract(camera.position)
+            poseStack.translate(p.x, p.y, p.z)
             vertexBuf?.let {
                 RenderSystem.setShader { GameRenderer.getPositionColorShader() }
                 it.bind()
@@ -252,7 +253,7 @@ object Overlay {
         var stack = PoseStack()
 
         for (entry in blocks) {
-            drawBlockOutline(entry, stack, buf)
+            drawBlockOutline(entry, stack, camera, buf)
         }
 
         val rendered = buf.end()
@@ -261,6 +262,7 @@ object Overlay {
         vbuf.upload(rendered)
         VertexBuffer.unbind()
         vertexBuf = vbuf
+        vertexBufPosition = camera.position
         dataAvailable = false
     }
 
@@ -286,9 +288,9 @@ object Overlay {
         if (!entity.isAlive) {
             text += " [X]"
         }
-
+        val p = camera.position
         pos.apply {
-            poseStack.translate(x, y + entity.bbHeight + 0.33, z)
+            poseStack.translate(x - p.x, y + entity.bbHeight + 0.33 - p.y, z - p.z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
@@ -311,11 +313,13 @@ object Overlay {
     private inline fun drawBlockOutline(
         entry: Entry.BlockEntry,
         poseStack: PoseStack,
+        camera: Camera,
         buf: VertexConsumer
     ) {
         poseStack.pushPose()
 
-        entry.pos.apply { poseStack.translate(x.toDouble(), y.toDouble(), z.toDouble()) }
+        val p = camera.position
+        entry.pos.apply { poseStack.translate(x.toDouble() - p.x, y.toDouble() - p.y, z.toDouble() - p.z)}
         val mat = poseStack.last().pose()
         entry.color.apply {
             buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
@@ -363,9 +367,10 @@ object Overlay {
         val (pos, rate) = entry
         val text = "${(rate / 1000).roundToInt()} μs/t"
 
+        val p = camera.position
         val col: Int = -0x1
         pos.apply {
-            poseStack.translate(x + 0.5, y + 0.5, z + 0.5)
+            poseStack.translate(x + 0.5 - p.x, y + 0.5 - p.y, z + 0.5 - p.z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
