@@ -281,15 +281,9 @@ object Overlay {
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
-        var pos = entity.position()
+        val pos = entity.getPosition(partialTicks)
         if (camera.position.distanceTo(pos) > ClientSettings.maxEntityDist) return
-        if (entity.isAlive) {
-            pos =
-                pos.add(
-                    with(entity.deltaMovement) { Vec3(x, y.coerceAtLeast(0.0), z) }
-                        .scale(partialTicks.toDouble())
-                )
-        } else {
+        if (!entity.isAlive) {
             text += " [X]"
         }
 
