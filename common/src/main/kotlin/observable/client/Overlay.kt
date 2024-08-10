@@ -252,7 +252,7 @@ object Overlay {
 
         var stack = PoseStack()
 
-        for (entry in blocks) {
+        for (entry in blocks.filter { block -> block.pos.distSqr(camera.blockPosition) < 1_440_000 }) {
             drawBlockOutline(entry, stack, camera, buf)
         }
 
