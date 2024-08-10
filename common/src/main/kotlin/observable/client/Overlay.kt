@@ -223,8 +223,8 @@ object Overlay {
                 drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
             }
 
-            val p = vertexBufPosition.subtract(camera.position)
-            poseStack.translate(p.x, p.y, p.z)
+            vertexBufPosition.subtract(camera.position).apply { poseStack.translate(x, y, z) }
+
             vertexBuf?.let {
                 RenderSystem.setShader { GameRenderer.getPositionColorShader() }
                 it.bind()
@@ -288,9 +288,9 @@ object Overlay {
         if (!entity.isAlive) {
             text += " [X]"
         }
-        val p = camera.position
-        pos.apply {
-            poseStack.translate(x - p.x, y + entity.bbHeight + 0.33 - p.y, z - p.z)
+
+        pos.subtract(camera.position).apply {
+            poseStack.translate(x, y + entity.bbHeight + 0.33, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
@@ -318,8 +318,7 @@ object Overlay {
     ) {
         poseStack.pushPose()
 
-        val p = camera.position
-        entry.pos.apply { poseStack.translate(x.toDouble() - p.x, y.toDouble() - p.y, z.toDouble() - p.z)}
+        Vec3.atLowerCornerOf(entry.pos).subtract(camera.position).apply { poseStack.translate(x, y, z)}
         val mat = poseStack.last().pose()
         entry.color.apply {
             buf.vertex(mat, 0F, 1F, 0F).color(r, g, b, a).endVertex()
@@ -367,10 +366,9 @@ object Overlay {
         val (pos, rate) = entry
         val text = "${(rate / 1000).roundToInt()} μs/t"
 
-        val p = camera.position
         val col: Int = -0x1
-        pos.apply {
-            poseStack.translate(x + 0.5 - p.x, y + 0.5 - p.y, z + 0.5 - p.z)
+        Vec3.atCenterOf(pos).subtract(camera.position).apply {
+            poseStack.translate(x, y, z)
             poseStack.mulPose(camera.rotation())
             poseStack.scale(-0.025F, -0.025F, 0.025F)
             font.drawInBatch(
