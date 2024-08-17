@@ -275,11 +275,7 @@ object Overlay {
     ) {
         val rate = entry.rate
         val entity = entry.entity ?: return
-        if (entity.isRemoved ||
-            (entity == Minecraft.getInstance().player && entity.deltaMovement.lengthSqr() > .01)
-        ) {
-            return
-        }
+        if (entity.isRemoved) return
 
         poseStack.pushPose()
         var text = "${(rate / 1000).roundToInt()} μs/t"
