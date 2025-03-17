@@ -157,9 +157,9 @@ fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
 
     player.teleportTo(pos.x, pos.y, pos.z)
     if (level == player.level()) {
-        player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
+        player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F)
     } else {
-        player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)
+        player.teleportTo(level, pos.x, pos.y, pos.z, setOf(), 0F, 0F, true)
     }
     Observable.LOGGER.info("Moved ${player.gameProfile.name} to (${pos.x}, ${pos.y}, ${pos.z}) in $level")
 }

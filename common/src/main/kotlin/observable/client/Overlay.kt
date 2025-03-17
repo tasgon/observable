@@ -1,5 +1,6 @@
 package observable.client
 
+import com.mojang.blaze3d.buffers.BufferUsage
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
@@ -8,7 +9,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.Font.DisplayMode
 import net.minecraft.client.multiplayer.ClientLevel
-import net.minecraft.client.renderer.GameRenderer
+import net.minecraft.client.renderer.CoreShaders
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderStateShard
 import net.minecraft.client.renderer.RenderType
@@ -122,7 +123,7 @@ object Overlay {
 
             private fun buildCompositeState(): CompositeState {
                 return RenderType.CompositeState.builder()
-                    .setShaderState(ShaderStateShard { GameRenderer.getPositionColorShader() })
+                    .setShaderState(ShaderStateShard(CoreShaders.POSITION_COLOR))
                     //                    .setTextureState(EmptyTextureStateShard({}, {}))
                     .setDepthTestState(DepthTestStateShard("always", 519))
                     .setTransparencyState(
@@ -233,7 +234,7 @@ object Overlay {
                 it.drawWithShader(
                     poseStack.last().pose(),
                     projection,
-                    GameRenderer.getPositionColorShader()!!
+                    RenderSystem.getShader()
                 )
                 VertexBuffer.unbind()
             }
@@ -258,7 +259,7 @@ object Overlay {
         }
 
         val rendered = buf.build() ?: return
-        val vbuf = VertexBuffer(VertexBuffer.Usage.DYNAMIC)
+        val vbuf = VertexBuffer(BufferUsage.DYNAMIC_WRITE)
         vbuf.bind()
         vbuf.upload(rendered)
         VertexBuffer.unbind()
