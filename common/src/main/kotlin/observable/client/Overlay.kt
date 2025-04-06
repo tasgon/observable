@@ -149,6 +149,8 @@ object Overlay {
     @Suppress("INACCESSIBLE_TYPE")
     private val renderType: RenderType by lazy { OverlayRenderType.build() }
 
+    private val compiledShader by lazy { Minecraft.getInstance().getShaderManager().getProgram(CoreShaders.POSITION_COLOR) }
+
     fun load(lvl: ClientLevel? = null) {
         val data = Observable.RESULTS ?: return
         val level = lvl ?: Minecraft.getInstance().level ?: return
@@ -234,7 +236,7 @@ object Overlay {
                 it.drawWithShader(
                     poseStack.last().pose(),
                     projection,
-                    RenderSystem.getShader()
+                    compiledShader
                 )
                 VertexBuffer.unbind()
             }
