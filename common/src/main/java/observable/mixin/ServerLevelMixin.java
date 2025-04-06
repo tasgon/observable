@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import observable.Observable;
@@ -14,21 +13,20 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.util.Random;
 import java.util.function.Consumer;
 
 @Mixin(ServerLevel.class)
-public class ServerLevelMixin {
+public abstract class ServerLevelMixin {
     @Redirect(method = "tickFluid", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"))
-    public final void observable$onTickLiquid(FluidState state, Level level, BlockPos pos) {
-        if (Props.notProcessing) state.tick(level, pos);
+        target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+        public final void observable$onTickLiquid(FluidState state, ServerLevel level, BlockPos pos, BlockState blockState) {
+        if (Props.notProcessing) state.tick(level, pos, blockState);
         else {
             if (Props.fluidDepth < 0) Props.fluidDepth = Thread.currentThread().getStackTrace().length - 1;
             Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processFluid(state, pos, level);
             Props.currentTarget.set(data);
             long start = System.nanoTime();
-            state.tick(level, pos);
+            state.tick(level, pos, blockState);
             data.setTime(System.nanoTime() - start + data.getTime());
             Props.currentTarget.set(null);
             data.setTicks(data.getTicks() + 1);
