@@ -10,6 +10,7 @@ import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
@@ -42,8 +43,6 @@ object Observable {
             "category.observable.keybinds"
         )
     }
-
-    private val CLIENT_CHAT get() = GameInstance.getClient().gui.chat
 
     val CHANNEL = BetterChannel(ResourceLocation.fromNamespaceAndPath("observable", "channel"))
     val LOGGER: Logger = LogManager.getLogger("Observable")
@@ -112,13 +111,14 @@ object Observable {
                     it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, t.link))
                 }
                 val msg = Component.translatable("text.observable.profile_uploaded", linkText)
-                CLIENT_CHAT.addMessage(msg)
+                Minecraft.getInstance().player?.displayClientMessage(msg, false)
             } else {
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.upload_failed"))
-                CLIENT_CHAT.addMessage(
-                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data))
+                Minecraft.getInstance().player?.displayClientMessage(Component.translatable("text.observable.upload_failed"), false)
+                Minecraft.getInstance().player?.displayClientMessage(
+                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data)),
+                    false
                 )
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT))
+                Minecraft.getInstance().player?.displayClientMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT), false)
             }
         }
 
@@ -159,11 +159,12 @@ object Observable {
         ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { level ->
             Overlay.loadSync(level)
             Marker("observable_announce").mark {
-                CLIENT_CHAT.addMessage(
+                Minecraft.getInstance().player?.displayClientMessage(
                     Component.translatable(
                         "text.observable.announce",
                         MOD_URL_COMPONENT
-                    )
+                    ),
+                    false
                 )
             }
         }
