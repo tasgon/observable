@@ -43,8 +43,6 @@ object Observable {
         )
     }
 
-    private val CLIENT_CHAT get() = GameInstance.getClient().gui.chat
-
     val CHANNEL = BetterChannel(ResourceLocation.fromNamespaceAndPath("observable", "channel"))
     val LOGGER: Logger = LogManager.getLogger("Observable")
     val PROFILER: Profiler by lazy { Profiler() }
@@ -112,13 +110,13 @@ object Observable {
                     it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, t.link))
                 }
                 val msg = Component.translatable("text.observable.profile_uploaded", linkText)
-                CLIENT_CHAT.addMessage(msg)
+                GameInstance.getClient().player?.displayClientMessage(msg, false)
             } else {
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.upload_failed"))
-                CLIENT_CHAT.addMessage(
-                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data))
+                GameInstance.getClient().player?.displayClientMessage(Component.translatable("text.observable.upload_failed"), false)
+                GameInstance.getClient().player?.displayClientMessage(
+                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data)), false
                 )
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT))
+                GameInstance.getClient().player?.displayClientMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT), false)
             }
         }
 
@@ -159,11 +157,9 @@ object Observable {
         ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { level ->
             Overlay.loadSync(level)
             Marker("observable_announce").mark {
-                CLIENT_CHAT.addMessage(
-                    Component.translatable(
-                        "text.observable.announce",
-                        MOD_URL_COMPONENT
-                    )
+                GameInstance.getClient().player?.displayClientMessage(
+                    Component.translatable("text.observable.announce", MOD_URL_COMPONENT),
+                    false
                 )
             }
         }
