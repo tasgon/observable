@@ -1,6 +1,6 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "8.1.1"
-    id 'org.jetbrains.kotlin.jvm'
+    id "com.gradleup.shadow" version "9.6.0"
+    id "org.jetbrains.kotlin.jvm"
     id "me.shedaniel.unified-publishing"
 }
 
@@ -11,40 +11,30 @@ architectury {
 
 configurations {
     common
-    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
+    shadowCommon
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
-    developmentFabric.extendsFrom common
 }
 
 loom {
     runs {
         client {
             vmArg "-Xmx2G"
-//            vmArg "-verbose:class"
-//            vmArg "-Dmixin.debug=true"
-//            vmArg "-Djava.library.path=/Users/me/Documents/m1-multimc-hack/lwjglnatives"
         }
     }
 }
 
 dependencies {
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
-    // Remove the next line if you don't want to depend on the API
-    modApi "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    implementation "net.fabricmc:fabric-language-kotlin:${rootProject.fabric_language_kotlin_version}"
+    implementation "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
 
-//    implementation(project(path: ":common")) {
-//        transitive = false
-//    }
-//    developmentFabric(project(path: ":common")) {
-//        transitive = false
-//    }
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    common(project(path: ":common")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) {
         transitive = false
     }
-    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version") {
+    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:${rootProject.kotlin_serialization_version}") {
         transitive = false
     }
 }
@@ -57,26 +47,22 @@ processResources {
     }
 }
 
-shadowJar {
-    configurations = [project.configurations.shadowCommon]
-    archiveClassifier = "dev-shadow"
-
-    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
-}
-
-remapJar {
-    input.set shadowJar.archiveFile
-    dependsOn shadowJar
-    archiveClassifier = null
-}
-
 jar {
-    archiveClassifier = "dev"
+    archiveClassifier = "raw"
 }
 
-java {
-    withSourcesJar()
+shadowJar {
+    dependsOn jar
+    mainSpec.sourcePaths.clear()
+    from(zipTree(jar.archiveFile))
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = null
+
+    relocate "kotlinx.serialization.protobuf", "observable.shadow.kotlinx.serialization.protobuf"
 }
+
+assemble.dependsOn shadowJar
 
 sourcesJar {
     def commonSources = project(":common").sourcesJar
@@ -84,16 +70,26 @@ sourcesJar {
     from commonSources.archiveFile.map { zipTree(it) }
 }
 
+configurations {
+    apiElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(shadowJar)
+    }
+    runtimeElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(shadowJar)
+    }
+}
 
-// Credit to shedaniel (architectury) for most of this
 unifiedPublishing {
     project {
         displayName = "$project.version (fabric)"
         releaseType = "$rootProject.release_channel"
         changelog = "See Observable's GitHub releases page for all changes between versions."
         gameVersions = ["$project.minecraft_version"]
-        gameLoaders = ["fabric", "quilt"]
-        mainPublication remapJar
+        gameLoaders = ["fabric"]
+        mainPublication shadowJar
+
         relations {
             depends {
                 curseforge = "fabric-api"
@@ -109,21 +105,19 @@ unifiedPublishing {
             }
         }
 
-        var CURSE_API_KEY = project.findProperty("CURSE_API_KEY") ?: System.getenv("CURSE_API_KEY")
-        if (CURSE_API_KEY != null) {
+        def curseApiKey = project.findProperty("CURSE_API_KEY") ?: System.getenv("CURSE_API_KEY")
+        if (curseApiKey != null) {
             curseforge {
-                token = CURSE_API_KEY
+                token = curseApiKey
                 id = rootProject.curseforge_id
-                gameVersions.addAll "Java 21"
+                gameVersions.addAll "Java 25"
             }
-        } else {
-            println "CF key missing"
         }
 
-        var MODRINTH_TOKEN = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN")
-        if (MODRINTH_TOKEN != null) {
+        def modrinthToken = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN")
+        if (modrinthToken != null) {
             modrinth {
-                token = MODRINTH_TOKEN
+                token = modrinthToken
                 id = rootProject.modrinth_id
                 version = "$project.version+$project.name"
             }
@@ -135,27 +129,7 @@ publishing {
     publications {
         mavenFabric(MavenPublication) {
             artifactId = rootProject.archives_base_name + "-" + project.name
-            // add all the jars that should be included when publishing to maven
-            artifact(remapJar) {
-                classifier = null
-            }
-            artifact(sourcesJar) {
-                builtBy remapSourcesJar
-            }
+            from components.java
         }
     }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-    }
-}
-repositories {
-    mavenCentral()
-}
-compileKotlin {
-    kotlinOptions.jvmTarget = "21"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "21"
 }

@@ -1,6 +1,6 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "8.1.1"
-    id 'org.jetbrains.kotlin.jvm'
+    id "com.gradleup.shadow" version "9.6.0"
+    id "org.jetbrains.kotlin.jvm"
     id "me.shedaniel.unified-publishing"
 }
 
@@ -9,31 +9,25 @@ architectury {
     neoForge()
 }
 
-loom {}
-
 configurations {
     common
-    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
+    shadowCommon
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
-    developmentNeoForge.extendsFrom common
 }
 
 dependencies {
     neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
-    modApi "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
+    implementation "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
+    implementation "thedarkcolour:kotlinforforge-neoforge:${rootProject.kotlin_for_forge_version}"
 
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    common(project(path: ":common")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) {
         transitive = false
     }
-    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version") {
+    shadowCommon("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:${rootProject.kotlin_serialization_version}") {
         transitive = false
     }
-
-    forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:$kotlin_serialization_version")
-    forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlin_serialization_version")
 }
 
 processResources {
@@ -44,32 +38,25 @@ processResources {
     }
 }
 
+jar {
+    archiveClassifier = "raw"
+}
+
 shadowJar {
-    outputs.upToDateWhen { false }
+    dependsOn jar
+    mainSpec.sourcePaths.clear()
+    from(zipTree(jar.archiveFile))
 
     exclude "fabric.mod.json"
-
-    configurations = [project.configurations.shadowCommon]
-    archiveClassifier =  "dev-shadow"
-
     exclude "**/*.kotlin_metadata"
 
-    relocate 'kotlinx.serialization.protobuf', 'observable.shadow.kotlinx.serialization.protobuf'
-}
-
-remapJar {
-    inputFile.set shadowJar.archiveFile
-    dependsOn shadowJar
+    configurations = [project.configurations.shadowCommon]
     archiveClassifier = null
+
+    relocate "kotlinx.serialization.protobuf", "observable.shadow.kotlinx.serialization.protobuf"
 }
 
-jar {
-    archiveClassifier = "dev"
-}
-
-java {
-    withSourcesJar()
-}
+assemble.dependsOn shadowJar
 
 sourcesJar {
     def commonSources = project(":common").sourcesJar
@@ -77,13 +64,17 @@ sourcesJar {
     from commonSources.archiveFile.map { zipTree(it) }
 }
 
-components.java {
-    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
-        skip()
+configurations {
+    apiElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(shadowJar)
+    }
+    runtimeElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(shadowJar)
     }
 }
 
-// Credit to shedaniel (architectury) for most of this
 unifiedPublishing {
     project {
         displayName = "$project.version (neoforge)"
@@ -91,7 +82,8 @@ unifiedPublishing {
         changelog = "See Observable's GitHub releases page for all changes between versions."
         gameVersions = ["$project.minecraft_version"]
         gameLoaders = ["neoforge"]
-        mainPublication remapJar
+        mainPublication shadowJar
+
         relations {
             depends {
                 curseforge = "architectury-api"
@@ -108,7 +100,7 @@ unifiedPublishing {
             curseforge {
                 token = CURSE_API_KEY
                 id = rootProject.curseforge_id
-                gameVersions.addAll "Java 21"
+                gameVersions.addAll "Java 25"
             }
         }
 
@@ -125,29 +117,9 @@ unifiedPublishing {
 
 publishing {
     publications {
-        mavenForge(MavenPublication) {
-            artifactId = rootProject.archives_base_name + "-" + project.name
-            // add all the jars that should be included when publishing to maven
-            artifact(remapJar) {
-                classifier null
-            }
-            artifact(sourcesJar) {
-                builtBy remapSourcesJar
-            }
+        mavenNeoForge(MavenPublication) {
+            artifactId = rootProject.archives_base_name + "-neoforge"
+            from components.java
         }
     }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-    }
-}
-repositories {
-    mavenCentral()
-}
-compileKotlin {
-    kotlinOptions.jvmTarget = "21"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "21"
 }
