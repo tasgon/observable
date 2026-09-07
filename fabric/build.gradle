@@ -11,7 +11,7 @@ architectury {
 
 configurations {
     common
-    shadowCommon
+    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
 }
@@ -20,6 +20,8 @@ loom {
     runs {
         client {
             vmArg "-Xmx2G"
+//            vmArg "-verbose:class"
+//            vmArg "-Dmixin.debug=true"
         }
     }
 }
@@ -81,6 +83,7 @@ configurations {
     }
 }
 
+// Credit to shedaniel (architectury) for most of this
 unifiedPublishing {
     project {
         displayName = "$project.version (fabric)"

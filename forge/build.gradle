@@ -11,7 +11,7 @@ architectury {
 
 configurations {
     common
-    shadowCommon
+    shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
 }
@@ -75,6 +75,7 @@ configurations {
     }
 }
 
+// Credit to shedaniel (architectury) for most of this
 unifiedPublishing {
     project {
         displayName = "$project.version (neoforge)"
