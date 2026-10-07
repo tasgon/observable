@@ -1,387 +1,213 @@
 package observable.client
 
-import com.mojang.blaze3d.platform.GlStateManager
-import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.*
-import net.minecraft.client.Camera
+import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.Font.DisplayMode
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.ClientLevel
-import net.minecraft.client.renderer.GameRenderer
 import net.minecraft.client.renderer.MultiBufferSource
-import net.minecraft.client.renderer.RenderStateShard
-import net.minecraft.client.renderer.RenderType
+import net.minecraft.client.renderer.SubmitNodeCollector
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ChunkPos
+import net.minecraft.world.level.ChunkPos.containing
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import org.joml.Matrix4f
-import kotlin.math.pow
+import observable.client.ObservableClient
+import observable.server.ProfilingData
+import org.joml.Matrix4fc
 import kotlin.math.roundToInt
 
-object Overlay {
-    data class Color(val r: Int, val g: Int, val b: Int, val a: Int) {
-        companion object {
-            fun fromNanos(rateNanos: Double): Color {
-                val micros = rateNanos / 1000.0
-                return Color(micros)
-            }
+/**
+ * High-level Client Controller for Profile Overlay and HUD.
+ */
+object Overlay : ClientBridge, WorldRenderer {
+    override val settingsKey = ObservableClient.KEY_OPEN_SETTINGS
+    override val overlayKey = ObservableClient.KEY_TOGGLE_OVERLAY
+
+    data class RateEntry(
+        val pos: BlockPos,
+        val rate: Double,
+    )
+
+    object RenderColor {
+        fun fromNanos(rateNanos: Double): PackedColor {
+            val rateMicros = rateNanos / 1000.0
+            val r = (rateMicros / 100.0 * 255).toInt().coerceIn(0, 255)
+            val g = ((100.0 - rateMicros) / 100.0 * 255).toInt().coerceIn(0, 255)
+            val a = (rateMicros / 100.0 * 255).toInt().coerceIn(20, 100)
+            return PackedColor((a shl 24) or (r shl 16) or (g shl 8))
         }
-
-        constructor(
-            rateMicros: Double
-        ) : this(
-            (rateMicros / 100.0 * 255).roundToInt().coerceIn(0, 255),
-            ((100.0 - rateMicros) / 100.0 * 255).roundToInt().coerceIn(0, 255),
-            0,
-            (rateMicros / 100.0 * 255).roundToInt().coerceIn(20, 100)
-        )
-
-        val hex: Int =
-            with(this) {
-                val red = if (r > g) 0xFFu else (255 * r / g).toUInt()
-                val green = if (g > r) 0xFFu else (255 * g / r).toUInt()
-                (red shl 16) or (green shl 8) or (0xFFu shl 24)
-            }
-                .toInt()
     }
 
-    sealed class Entry(val color: Color) {
-        data class EntityEntry(val entityId: Int, val rate: Double) : Entry(Color.fromNanos(rate)) {
-            val entity
-                get() = Minecraft.getInstance().level?.getEntity(entityId)
-        }
-
-        data class BlockEntry(val pos: BlockPos, val rate: Double) : Entry(Color.fromNanos(rate))
+    @JvmInline
+    value class PackedColor(
+        val argb: Int,
+    ) {
+        val r get() = (argb shr 16) and 0xFF
+        val g get() = (argb shr 8) and 0xFF
+        val b get() = argb and 0xFF
+        val a get() = (argb shr 24) and 0xFF
+        val hex get() = argb or (0xFF shl 24)
     }
 
-    var enabled = true
+    sealed class Entry {
+        data class EntityEntry(
+            val entityId: Int,
+            val rate: Double,
+        ) : Entry() {
+            val color = RenderColor.fromNanos(rate)
+            val entity get() = Minecraft.getInstance().level?.getEntity(entityId)
+        }
+    }
+
     var entities: List<Entry.EntityEntry> = ArrayList()
-    var blocks: List<Entry.BlockEntry> = ArrayList()
-    var blockMap = mapOf<ChunkPos, List<Entry.BlockEntry>>()
-    lateinit var loc: Vec3
-    var vertexBuf: VertexBuffer? = null
-    var vertexBufPosition: Vec3 = Vec3.ZERO
-    var dataAvailable = false
+    private var blockMap = emptyMap<ChunkPos, List<RateEntry>>()
 
-    val DIST_FAC = 1.0 / (2 * 16.0.pow(2)).pow(.5)
+    fun init() {}
 
     val font: Font by lazy { Minecraft.getInstance().font }
 
-    class OverlayRenderType(name: String, fmt: VertexFormat, mode: VertexFormat.Mode) :
-        RenderType(
-            name,
-            fmt,
-            VertexFormat.Mode.QUADS,
-            256,
-            false,
-            true,
-            {},
-            {}
-        ) {
-        companion object {
-            fun build(): RenderType {
-                val boolType = java.lang.Boolean.TYPE
-
-                // So here's the thing: for some reason, Minecraft decided to not allow
-                // any kind of external access to  create a custom RenderType outside
-                // the class. However, we need to make our own to have the block outlines
-                // visible through walls. We can't mixin an invoker either as the
-                // CompositeRenderType is private within RenderType.
-                // We can get around that using reflection, hence this monstrosity.
-                val parameterTypes =
-                    arrayOf(
-                        String::class.java,
-                        VertexFormat::class.java,
-                        VertexFormat.Mode::class.java,
-                        Integer.TYPE,
-                        boolType,
-                        boolType,
-                        RenderType.CompositeState::class.java
-                    )
-                val fn =
-                    RenderType::class
-                        .java
-                        .declaredMethods
-                        .filter { method -> method.parameterTypes.contentEquals(parameterTypes) }
-                        .first()
-                fn.isAccessible = true
-
-                return fn.invoke(
-                    null,
-                    "heat",
-                    DefaultVertexFormat.POSITION_COLOR,
-                    VertexFormat.Mode.QUADS,
-                    256,
-                    false,
-                    false,
-                    buildCompositeState()
-                ) as RenderType
-            }
-
-            private fun buildCompositeState(): CompositeState {
-                return RenderType.CompositeState.builder()
-                    .setShaderState(ShaderStateShard { GameRenderer.getPositionColorShader() })
-                    //                    .setTextureState(EmptyTextureStateShard({}, {}))
-                    .setDepthTestState(DepthTestStateShard("always", 519))
-                    .setTransparencyState(
-                        RenderStateShard.TransparencyStateShard(
-                            "src_to_one",
-                            {
-                                RenderSystem.enableBlend()
-                                RenderSystem.blendFunc(
-                                    GlStateManager.SourceFactor.SRC_ALPHA,
-                                    GlStateManager.DestFactor.ONE
-                                )
-                            }
-                        ) {
-                            RenderSystem.disableBlend()
-                            RenderSystem.defaultBlendFunc()
-                        }
-                    )
-                    .createCompositeState(true)
-            }
-        }
+    override fun clear() {
+        entities = emptyList()
+        blockMap = emptyMap()
+        Observable.RESULTS = null
     }
 
-    @Suppress("INACCESSIBLE_TYPE")
-    private val renderType: RenderType by lazy { OverlayRenderType.build() }
+    private fun normalize(
+        dataEntry: ProfilingData.Entry,
+        totalTicks: Int,
+        norm: Boolean,
+    ): Double = dataEntry.rate * (if (norm) dataEntry.ticks.toDouble() / totalTicks else 1.0)
 
     fun load(lvl: ClientLevel? = null) {
         val data = Observable.RESULTS ?: return
         val level = lvl ?: Minecraft.getInstance().level ?: return
-        val levelLocation = level.dimension().location()
-        val ticks = data.ticks
+        val levelLocation = level.dimension().identifier()
+        val totalTicks = data.ticks
         val norm = ClientSettings.normalized
+        val minRate = ClientSettings.minRate
+
         entities =
             data.entities[levelLocation]
-                ?.map {
-                    Entry.EntityEntry(
-                        it.entityId!!,
-                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
-                    )
-                }
+                ?.map { Entry.EntityEntry(it.entityId!!, normalize(it, totalTicks, norm)) }
+                ?.filter { it.rate >= minRate }
+                ?.sortedByDescending { it.rate }
                 .orEmpty()
-                .filter { it.rate >= ClientSettings.minRate }
-                .sortedByDescending { it.rate }
 
-        blocks =
+        val blocks =
             data.blocks[levelLocation]
-                ?.map {
-                    Entry.BlockEntry(
-                        it.position,
-                        it.rate * (if (norm) it.ticks.toDouble() / ticks else 1.0)
-                    )
-                }
-                ?.filter { it.rate >= ClientSettings.minRate }
+                ?.map { RateEntry(it.position, normalize(it, totalTicks, norm)) }
+                ?.filter { it.rate >= minRate }
                 .orEmpty()
-        blockMap = blocks.groupBy { ChunkPos(it.pos) }
-
-        dataAvailable = true
-    }
-
-    inline fun loadSync(lvl: ClientLevel? = null) = synchronized(this) { this.load(lvl) }
-
-    fun render(poseStack: PoseStack, partialTicks: Float, projection: Matrix4f) {
-        if (!enabled || Observable.RESULTS == null) return
-
-        val camera = Minecraft.getInstance().gameRenderer.mainCamera
-        val bufSrc = Minecraft.getInstance().renderBuffers().bufferSource()
-
-        RenderSystem.disableDepthTest()
-        RenderSystem.enableBlend()
-        RenderSystem.blendFunc(
-            GlStateManager.SourceFactor.SRC_ALPHA,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
-        )
-
-        poseStack.pushPose()
-
-        if (dataAvailable || vertexBufPosition.distanceToSqr(camera.position) > 1_000_000) {
-            createVBO(camera)
-            dataAvailable = false
-        }
 
         synchronized(this) {
-            val cpos = ChunkPos(Minecraft.getInstance().player!!.blockPosition())
-            val dist = (ClientSettings.maxBlockDist / 16).coerceAtLeast(2)
-            for (x in (cpos.x - dist)..(cpos.x + dist)) {
-                for (y in (cpos.z - dist)..(cpos.z + dist)) {
-                    blockMap[ChunkPos(x, y)]?.forEach { entry ->
-                        val maxDist = ClientSettings.maxBlockDist * ClientSettings.maxBlockDist
-                        if (camera.blockPosition.distSqr(entry.pos) < maxDist) {
-                            drawBlock(entry, poseStack, camera, bufSrc)
+            blockMap = blocks.groupBy { ChunkPos.containing(it.pos) }
+        }
+    }
+
+    fun loadSync(lvl: ClientLevel? = null) = synchronized(this) { this.load(lvl) }
+
+    fun renderHud(
+        graphics: GuiGraphicsExtractor,
+        delta: DeltaTracker,
+    ) {
+        if (!ObservableClient.isOverlayEnabled || Observable.RESULTS == null) return
+        val mc = Minecraft.getInstance()
+        val partialTicks = delta.getGameTimeDeltaPartialTick(true)
+        val cameraPos = mc.gameRenderer.mainCamera.position()
+
+        synchronized(this) {
+            val distLimit = ClientSettings.maxBlockDist
+            val maxDistSq = distLimit * distLimit
+
+            for ((i, entry) in entities.withIndex()) {
+                if (i > (ClientSettings.maxEntityCount - 1)) break
+                val entity = entry.entity ?: continue
+                if (entity.isRemoved) continue
+                val pos = entity.getPosition(partialTicks)
+                val distSq = cameraPos.distanceToSqr(pos)
+                if (distSq > maxDistSq.toDouble()) continue
+            }
+        }
+    }
+
+    override fun render(
+        stack: Matrix4fc,
+        bufferSource: MultiBufferSource,
+        camera: Vec3,
+        modelViewMatrix: Matrix4fc,
+        delta: net.minecraft.client.DeltaTracker,
+        collector: net.minecraft.client.renderer.SubmitNodeCollector?,
+        cameraState: net.minecraft.client.renderer.state.level.CameraRenderState,
+        flush: Boolean,
+    ) {
+        if (ProfilerBridge.isSettingsKeyClicked()) {
+            ProfilerBridge.openProfileScreen()
+        }
+        if (ProfilerBridge.isOverlayKeyClicked()) {
+            ObservableClient.isOverlayEnabled = !ObservableClient.isOverlayEnabled
+        }
+        if (ObservableClient.KEY_CYCLE_RENDER_MODE.consumeClick()) {
+            ClientConfig.cycleRenderMode()
+        }
+
+        if (!ObservableClient.isOverlayEnabled) return
+        val player = Minecraft.getInstance().player ?: return
+        if (Observable.RESULTS == null) return
+
+        val labels = mutableListOf<ProfilerBridge.LabelEntry>()
+        val visibleBoxEntries = mutableListOf<RateEntry>()
+        val distLimit = ClientSettings.maxBlockDist
+        val maxDistSq = distLimit * distLimit
+        val camPos =
+            Minecraft
+                .getInstance()
+                .gameRenderer.mainCamera
+                .position()
+        val partialTicks = delta.getGameTimeDeltaPartialTick(true)
+
+        synchronized(this) {
+            // Collect Entities
+            for ((i, entry) in entities.withIndex()) {
+                if (i > (ClientSettings.maxEntityCount - 1)) break
+                val entity = entry.entity ?: continue
+                if (entity.isRemoved) continue
+                val pos = entity.getPosition(partialTicks)
+                val distSq = camPos.distanceToSqr(pos)
+                if (distSq <= maxDistSq.toDouble()) {
+                    val labelPos = Vec3(pos.x, pos.y + entity.bbHeight + 0.33, pos.z)
+                    labels.add(ProfilerBridge.LabelEntry(labelPos, "${(entry.rate / 1000).roundToInt()} μs/t", entry.color.hex))
+                }
+            }
+
+            // Collect Blocks
+            val cpos = ChunkPos.containing(player.blockPosition())
+            val chunkLimit = (distLimit / 16).coerceAtLeast(2)
+            for (x in (cpos.x - chunkLimit)..(cpos.x + chunkLimit)) {
+                for (z in (cpos.z - chunkLimit)..(cpos.z + chunkLimit)) {
+                    blockMap[ChunkPos(x, z)]?.forEach { entry: RateEntry ->
+                        if (entry.rate < 1000) return@forEach
+                        val dx = entry.pos.x + 0.5 - camPos.x
+                        val dy = entry.pos.y + 0.5 - camPos.y
+                        val dz = entry.pos.z + 0.5 - camPos.z
+                        if (dx * dx + dy * dy + dz * dz < maxDistSq.toDouble()) {
+                            visibleBoxEntries.add(entry)
+                            labels.add(
+                                ProfilerBridge.LabelEntry(Vec3.atCenterOf(entry.pos), "${(entry.rate / 1000).roundToInt()} μs/t", -1),
+                            ) // -1 is 0xFFFFFFFF
                         }
                     }
                 }
             }
+        }
 
-            val maxEntityIndex = ClientSettings.maxEntityCount - 1
-            for ((i, entry) in entities.withIndex()) {
-                if (i > maxEntityIndex) break
-                drawEntity(entry, poseStack, partialTicks, camera, bufSrc)
+        val bridgeEntries =
+            visibleBoxEntries.map {
+                val color = RenderColor.fromNanos(it.rate)
+                ProfilerBridge.BlockEntry(it.pos, color.hex, color.a)
             }
-
-            poseStack.mulPose(camera.rotation().invert())
-            vertexBufPosition.subtract(camera.position).apply {
-                poseStack.translate(x, y, z)
-            }
-
-            vertexBuf?.let {
-                it.bind()
-                it.drawWithShader(
-                    poseStack.last().pose(),
-                    projection,
-                    GameRenderer.getPositionColorShader()!!
-                )
-                VertexBuffer.unbind()
-            }
-        }
-
-        poseStack.popPose()
-        bufSrc.endBatch()
-
-        // Cleanup
-        RenderSystem.enableDepthTest()
-    }
-
-    fun createVBO(camera: Camera) {
-        Observable.LOGGER.info("Initializing VBO")
-        vertexBuf?.close()
-        val buf = BufferBuilder(ByteBufferBuilder(renderType.bufferSize() * blocks.size), renderType.mode(), renderType.format())
-
-        var stack = PoseStack()
-
-        for (entry in blocks.filter { block -> block.pos.distSqr(camera.blockPosition) < 1_440_000 }) {
-            drawBlockOutline(entry, stack, camera, buf)
-        }
-
-        val rendered = buf.build() ?: return
-        val vbuf = VertexBuffer(VertexBuffer.Usage.DYNAMIC)
-        vbuf.bind()
-        vbuf.upload(rendered)
-        VertexBuffer.unbind()
-        vertexBuf = vbuf
-        vertexBufPosition = camera.position
-        dataAvailable = false
-    }
-
-    inline fun drawEntity(
-        entry: Entry.EntityEntry,
-        poseStack: PoseStack,
-        partialTicks: Float,
-        camera: Camera,
-        bufSrc: MultiBufferSource
-    ) {
-        val rate = entry.rate
-        val entity = entry.entity ?: return
-        if (entity.isRemoved) return
-
-        poseStack.pushPose()
-        var text = "${(rate / 1000).roundToInt()} μs/t"
-        val pos = entity.getPosition(partialTicks)
-        if (camera.position.distanceTo(pos) > ClientSettings.maxEntityDist) return
-        if (!entity.isAlive) {
-            text += " [X]"
-        }
-
-        pos.subtract(camera.position).apply {
-            poseStack.translate(x, y + entity.bbHeight + 0.33, z)
-            poseStack.mulPose(camera.rotation())
-            poseStack.scale(0.025F, -0.025F, 0.025F)
-            font.drawInBatch(
-                text,
-                -font.width(text).toFloat() / 2,
-                0F,
-                entry.color.hex,
-                false,
-                poseStack.last().pose(),
-                bufSrc,
-                DisplayMode.SEE_THROUGH,
-                0,
-                0xF000F0
-            )
-        }
-
-        poseStack.popPose()
-    }
-
-    private inline fun drawBlockOutline(
-        entry: Entry.BlockEntry,
-        poseStack: PoseStack,
-        camera: Camera,
-        buf: VertexConsumer
-    ) {
-        poseStack.pushPose()
-
-        Vec3.atLowerCornerOf(entry.pos).subtract(camera.position).apply { poseStack.translate(x, y, z) }
-        val mat = poseStack.last().pose()
-        entry.color.apply {
-            buf.addVertex(mat, 0F, 1F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 1F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 1F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 1F, 0F).setColor(r, g, b, a)
-
-            buf.addVertex(mat, 0F, 1F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 1F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 0F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 0F).setColor(r, g, b, a)
-
-            buf.addVertex(mat, 1F, 1F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 1F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 0F, 1F).setColor(r, g, b, a)
-
-            buf.addVertex(mat, 0F, 1F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 1F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 1F).setColor(r, g, b, a)
-
-            buf.addVertex(mat, 1F, 0F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 0F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 1F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 1F, 1F).setColor(r, g, b, a)
-
-            buf.addVertex(mat, 1F, 0F, 0F).setColor(r, g, b, a)
-            buf.addVertex(mat, 1F, 0F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 1F).setColor(r, g, b, a)
-            buf.addVertex(mat, 0F, 0F, 0F).setColor(r, g, b, a)
-        }
-
-        poseStack.popPose()
-    }
-
-    private inline fun drawBlock(
-        entry: Entry.BlockEntry,
-        poseStack: PoseStack,
-        camera: Camera,
-        bufSrc: MultiBufferSource
-    ) {
-        poseStack.pushPose()
-
-        val (pos, rate) = entry
-        val text = "${(rate / 1000).roundToInt()} μs/t"
-
-        val col: Int = -0x1
-        Vec3.atCenterOf(pos).subtract(camera.position).apply {
-            poseStack.translate(x, y, z)
-            poseStack.mulPose(camera.rotation())
-            poseStack.scale(0.025F, -0.025F, 0.025F)
-            font.drawInBatch(
-                text,
-                -font.width(text).toFloat() / 2,
-                0F,
-                col,
-                false,
-                poseStack.last().pose(),
-                bufSrc,
-                DisplayMode.SEE_THROUGH,
-                0,
-                0xF000F0
-            )
-        }
-
-        poseStack.popPose()
+        ProfilerBridge.drawWorldPass(stack, bufferSource, camPos, bridgeEntries, labels, collector, cameraState, flush)
     }
 }

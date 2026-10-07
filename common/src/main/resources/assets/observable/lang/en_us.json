@@ -1,8 +1,10 @@
 {
   "screen.observable.profile": "Profile",
   "screen.observable.results": "Results",
-  "key.observable.profile": "Show profiler screen",
-  "category.observable.keybinds": "Observable",
+  "key.category.observable.main": "Observable",
+  "key.observable.settings": "Open Profiler Menu",
+  "key.observable.overlay": "Toggle HUD Overlay",
+  "key.observable.cycle_render_mode": "Cycle Render Mode",
   "text.observable.profile_tps": "Profile TPS",
   "text.observable.profile_fps": "Profile FPS",
   "text.observable.sampler": "Profile with sampler (adds overhead)",
@@ -32,5 +34,18 @@
   "text.observable.minRate": "Minimum rate to visualize (μs/t):",
   "text.observable.normalize": "Normalize results:",
   "text.observable.maxEntityCount": "Max # of entities:",
-  "text.observable.cmd": "Observable is a server-side entity profiler that can help you figure out what's lagging your server. To learn more, go to %s."
+  "text.observable.cmd": "Observable is a server-side entity profiler that can help you figure out what's lagging your server. To learn more, go to %s.",
+  "text.observable.category.profiler": "Profiler Options",
+  "text.observable.category.visuals": "Visual Options",
+  "text.observable.clear": "Clear Results",
+  "text.observable.help_toggle": "Press %s to toggle overlay, %s for menu",
+  "text.observable.help_unbound": "Set a keybind to toggle overlay. Press %s for menu",
+  "text.observable.join_message": "Observable: Press %s to toggle overlay, %s to toggle menu.\nYou can disable this message in settings.",
+  "text.observable.render_mode": "Render Mode",
+  "text.observable.render_mode.cubes": "Cubes",
+  "text.observable.render_mode.wireframe": "Wireframe",
+  "text.observable.silence_join": "Disable join message:",
+  "text.observable.status.finished": "Profile finished. Please wait...",
+  "text.observable.status.new": "Duration: %s seconds (scroll to change)",
+  "text.observable.status.running": "Profiling, %s seconds left"
 }

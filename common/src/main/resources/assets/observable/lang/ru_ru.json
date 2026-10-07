@@ -1,8 +1,10 @@
 {
   "screen.observable.profile": "Анализ нагрузки",
   "screen.observable.results": "Результаты",
-  "key.observable.profile": "Показать меню",
-  "category.observable.keybinds": "Observable",
+  "key.category.observable.main": "Observable",
+  "key.observable.settings": "Открыть меню профайлера",
+  "key.observable.overlay": "Включить оверлей",
+  "key.observable.cycle_render_mode": "Переключить режим рендеринга",
   "text.observable.profile_tps": "Анализ TPS",
   "text.observable.profile_fps": "Анализ FPS",
   "text.observable.sampler": "Использовать семплер",
@@ -31,5 +33,19 @@
   "text.observable.maxEntityCount": "Максимальное кол-во сущностей: ",
   "text.observable.status.new": "Длительность: %s секунд (скролл для смены)",
   "text.observable.status.running": "В процессе, осталось %s секунд",
-  "text.observable.status.finished": "Анализ завершён. Пожалуйста, подождите..."
+  "text.observable.status.finished": "Анализ завершён. Пожалуйста, подождите...",
+  "text.observable.after_save": "Открыть этот файл на %s",
+  "text.observable.announce": "Этот модпак содержит Observable для поиска источников лагов. Ознакомьтесь с %s, чтобы узнать, как им пользоваться.",
+  "text.observable.category.profiler": "Параметры профилировщика",
+  "text.observable.category.visuals": "Параметры отображения",
+  "text.observable.clear": "Очистить результаты",
+  "text.observable.cmd": "Observable это серверный профилировщик сущностей, который может помочь вам выяснить, что вызывает лаги на вашем сервере. Чтобы узнать больше, перейдите по ссылке %s.",
+  "text.observable.help_toggle": "Нажмите %s для оверлея, %s для меню",
+  "text.observable.help_unbound": "Назначьте клавишу для оверлея. Нажмите %s для меню",
+  "text.observable.join_message": "Observable: Нажмите %s, чтобы переключить оверлей, %s, чтобы переключить меню.\nВы можете отключить это сообщение в настройках.",
+  "text.observable.minRate": "Минимальное значение для визуализации (мкс/т):",
+  "text.observable.render_mode": "Режим рендеринга",
+  "text.observable.render_mode.cubes": "Кубы",
+  "text.observable.render_mode.wireframe": "Сетка",
+  "text.observable.silence_join": "Скрыть сообщение при входе:"
 }

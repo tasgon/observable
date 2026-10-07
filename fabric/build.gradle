@@ -58,6 +58,9 @@ shadowJar {
     mainSpec.sourcePaths.clear()
     from(zipTree(jar.archiveFile))
 
+    exclude "**/*.kotlin_module"
+    exclude "**/*.kotlin_metadata"
+
     configurations = [project.configurations.shadowCommon]
     archiveClassifier = null
 
