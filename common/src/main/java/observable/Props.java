@@ -1,13 +1,14 @@
 package observable;
 
-import observable.server.Profiler;
+import observable.server.NativeTimingData;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Props {
-    public static boolean notProcessing = true;
+    public static final AtomicBoolean notProcessing = new AtomicBoolean(true);
 
-    public static AtomicReference<Profiler.TimingData> currentTarget = new AtomicReference<>(null);
+    public static final AtomicReference<NativeTimingData> currentTarget = new AtomicReference<>(null);
 
     public static int entityDepth = -1;
     public static int blockEntityDepth = -1;

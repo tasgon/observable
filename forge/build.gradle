@@ -30,7 +30,17 @@ dependencies {
     }
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    destinationDirectory = sourceSets.main.java.destinationDirectory
+}
+
+tasks.named("compileJava", JavaCompile).configure {
+    classpath += files(sourceSets.main.java.destinationDirectory)
+}
+
 processResources {
+    from project(":common").sourceSets.main.resources
+
     inputs.property "version", project.version
 
     filesMatching("META-INF/neoforge.mods.toml") {
@@ -49,6 +59,7 @@ shadowJar {
 
     exclude "fabric.mod.json"
     exclude "**/*.kotlin_metadata"
+    exclude "**/*.kotlin_module"
 
     configurations = [project.configurations.shadowCommon]
     archiveClassifier = null

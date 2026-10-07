@@ -1,6 +1,5 @@
 package observable.server
 
-import dev.architectury.utils.GameInstance
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -15,104 +14,60 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.FluidState
 import observable.Observable
 import observable.Props
+import observable.net.*
 import observable.net.S2CPacket
 import java.net.HttpURLConnection
-import java.net.URL
 import java.util.*
 import java.util.zip.GZIPOutputStream
 import kotlin.concurrent.schedule
-import kotlin.random.Random
-
-inline val StackTraceElement.classMethod
-    get() = "${this.className} + ${this.methodName}"
 
 class Profiler {
-    data class TimingData(
-        var time: Long,
-        var ticks: Int,
-        var traces: TraceMap,
-        var name: String = ""
-    )
+    var timingsMap = HashMap<Entity, NativeTimingData>()
+    var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, NativeTimingData>>()
+    private val lock = Any()
 
-    var timingsMap = HashMap<Entity, TimingData>()
-    lateinit var serverTraceMap: TraceMap
-    lateinit var serverThread: Thread
-    lateinit var samplerThread: Thread
-
-    // TODO: consider splitting out block entity timings
-    //    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
-    var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
-    var notProcessing
-        get() = Props.notProcessing
-        set(v) {
-            Props.notProcessing = v
-        }
+    var notProcessing: Boolean
+        get() = Props.notProcessing.get()
+        set(v) = Props.notProcessing.set(v)
 
     var player: ServerPlayer? = null
     var startTime: Long = 0
     var startingTicks: Int = 0
 
-    fun process(entity: Entity) =
-        timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
+    fun process(entity: Entity) = timingsMap.getOrPut(entity) { NativeTimingData(0, 0, "", TraceMap(entity::class)) }
 
-    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(blockEntity.pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(blockEntity::class),
-                    blockEntity.type
-                )
-            }
+    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(blockEntity.pos) {
+            NativeTimingData(0, 0, blockEntity.type, TraceMap(blockEntity.javaClass.name))
+        }
 
-    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(blockState::class),
-                    blockState.block.descriptionId
-                )
-            }
+    fun processBlock(state: BlockState, pos: BlockPos, level: Level) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(pos) {
+            NativeTimingData(0, 0, BuiltInRegistries.BLOCK.getKey(state.block).toString(), TraceMap(state.block::class))
+        }
 
-    fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(fluidState::class),
-                    BuiltInRegistries.FLUID.getKey(fluidState.type).toString()
-                )
-            }
+    fun processFluid(state: FluidState, pos: BlockPos, level: Level) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(pos) {
+            NativeTimingData(0, 0, BuiltInRegistries.FLUID.getKey(state.type).toString(), TraceMap(state.type::class))
+        }
 
     fun startRunning(sample: Boolean = false) {
         timingsMap.clear()
         blockTimingsMap.clear()
-        serverTraceMap = TraceMap()
         startTime = System.currentTimeMillis()
-        synchronized(Props.notProcessing) {
+        synchronized(lock) {
             notProcessing = false
-            startingTicks = GameInstance.getServer()!!.tickCount
+            startingTicks = Observable.SERVER_INSTANCE?.tickCount ?: 0
         }
         if (sample) {
-            samplerThread = Thread(TaggedSampler(serverThread))
-            samplerThread.start()
-
-            Thread {
-                while (!Props.notProcessing) {
-                    val interval = ServerSettings.traceInterval.toLong()
-                    val deviation = ServerSettings.deviation.toLong()
-                    serverTraceMap.add(serverThread.stackTrace.reversed().iterator())
-                    Thread.sleep(interval + Random.nextLong(-deviation, deviation))
-                }
-            }
-                .start()
+            // Start the background sampler thread
+            val thread = Thread(TaggedSampler(Thread.currentThread()))
+            thread.name = "Observable-Sampler"
+            thread.isDaemon = true
+            thread.start()
         }
     }
 
@@ -125,11 +80,13 @@ class Profiler {
         startRunning(sample)
         val durMs = duration.toLong() * 1000L
         Observable.CHANNEL.sendToPlayers(
-            GameInstance.getServer()!!.playerList.players,
-            S2CPacket.ProfilingStarted(startTime + durMs)
+            Observable.SERVER_INSTANCE!!.playerList.players,
+            S2CPacket.ProfilingStarted(System.currentTimeMillis() + durMs),
         )
         Timer("Profiler", false).schedule(durMs) {
-            stopRunning()
+            Observable.SERVER_INSTANCE?.execute {
+                stopRunning()
+            }
         }
     }
 
@@ -143,7 +100,7 @@ class Profiler {
         val serialized = Json.encodeToString(DataWithDiagnostics(data, diagnostics))
 
         return try {
-            val conn = URL(ServerSettings.uploadURL).openConnection() as HttpURLConnection
+            val conn = java.net.URI.create(ServerSettings.uploadURL).toURL().openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
 
@@ -165,22 +122,106 @@ class Profiler {
     fun stopRunning() {
         val diagnostics = getDiagnostics()
         val ticks: Int
-        synchronized(Props.notProcessing) {
+        synchronized(lock) {
             notProcessing = true
-            ticks = GameInstance.getServer()!!.tickCount - startingTicks
+            ticks = (Observable.SERVER_INSTANCE?.tickCount ?: 0) - startingTicks
+            Props.currentTarget.set(null)
         }
-        val players = player?.let { listOf(it) } ?: listOf()
-        Observable.CHANNEL.sendToPlayers(players, S2CPacket.ProfilingCompleted)
-        val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, serverTraceMap)
+
+        val playerList = player?.let { listOf(it) } ?: listOf()
+        Observable.CHANNEL.sendToPlayers(playerList, S2CPacket.ProfilingCompleted)
+
+        val rootTraceMap = TraceMap("Server", "all")
+        timingsMap.values.forEach { rootTraceMap.merge(it.traces as TraceMap) }
+        blockTimingsMap.values.forEach { posMap ->
+            posMap.values.forEach { rootTraceMap.merge(it.traces as TraceMap) }
+        }
+
+        val data = ProfilingData.create(timingsMap, blockTimingsMap, ticks, rootTraceMap)
+        Observable.RESULTS = data
+
         Observable.LOGGER.info("Profiler ran for $ticks ticks, sending data")
-        Observable.LOGGER.info("Sending to ${players.map { it.gameProfile.name }}")
+
         val link = uploadProfile(data, diagnostics)
-        Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data, link))
+        Observable.CHANNEL.sendToPlayers(playerList, S2CPacket.ProfilingResult(data, link))
+
         Observable.LOGGER.info("Data transfer complete!")
-        GameInstance.getServer()
+
+        Observable.SERVER_INSTANCE
             ?.playerList
             ?.players
             ?.filter { Observable.hasPermission(it) }
             ?.let { Observable.CHANNEL.sendToPlayers(it, S2CPacket.ProfilerInactive) }
+    }
+
+    fun init() {
+        NativeProfiler.setBlockEntityTicker { ticker, level ->
+            if (notProcessing) {
+                ticker.tick()
+                return@setBlockEntityTicker
+            }
+            val timing = processBlockEntity(ticker, level)
+            Props.currentTarget.set(timing)
+            val start = System.nanoTime()
+            ticker.tick()
+            val end = System.nanoTime()
+            Props.currentTarget.set(null)
+
+            timing.apply {
+                time += (end - start)
+                ticks++
+            }
+        }
+        NativeProfiler.setEntityTicker { entity, tickMethod ->
+            if (notProcessing) {
+                tickMethod.accept(entity)
+                return@setEntityTicker
+            }
+            val timing = process(entity)
+            Props.currentTarget.set(timing)
+            val start = System.nanoTime()
+            tickMethod.accept(entity)
+            val end = System.nanoTime()
+            Props.currentTarget.set(null)
+
+            timing.apply {
+                time += (end - start)
+                ticks++
+            }
+        }
+        NativeProfiler.setBlockTicker { state, level, pos, random ->
+            if (notProcessing) {
+                state.tick(level, pos, random)
+                return@setBlockTicker
+            }
+            val timing = processBlock(state, pos, level)
+            Props.currentTarget.set(timing)
+            val start = System.nanoTime()
+            state.tick(level, pos, random)
+            val end = System.nanoTime()
+            Props.currentTarget.set(null)
+
+            timing.apply {
+                time += (end - start)
+                ticks++
+            }
+        }
+        NativeProfiler.setFluidTicker { state, level, pos, blockState ->
+            if (notProcessing) {
+                state.tick(level, pos, blockState)
+                return@setFluidTicker
+            }
+            val timing = processFluid(state, pos, level)
+            Props.currentTarget.set(timing)
+            val start = System.nanoTime()
+            state.tick(level, pos, blockState)
+            val end = System.nanoTime()
+            Props.currentTarget.set(null)
+
+            timing.apply {
+                time += (end - start)
+                ticks++
+            }
+        }
     }
 }
