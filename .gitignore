@@ -5,6 +5,7 @@ run/
 out/
 *.iml
 .gradle/
+.kotlin/
 output/
 bin/
 libs/
