@@ -5,7 +5,7 @@ import observable.server.Profiler;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Props {
-    public static boolean notProcessing = true;
+    public static volatile boolean notProcessing = true;
 
     public static AtomicReference<Profiler.TimingData> currentTarget = new AtomicReference<>(null);
 

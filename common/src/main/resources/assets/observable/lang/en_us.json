@@ -2,7 +2,7 @@
   "screen.observable.profile": "Profile",
   "screen.observable.results": "Results",
   "key.observable.profile": "Show profiler screen",
-  "category.observable.keybinds": "Observable",
+  "key.category.observable.keybinds": "Observable",
   "text.observable.profile_tps": "Profile TPS",
   "text.observable.profile_fps": "Profile FPS",
   "text.observable.sampler": "Profile with sampler (adds overhead)",

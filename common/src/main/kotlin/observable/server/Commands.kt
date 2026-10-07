@@ -18,34 +18,34 @@ import observable.util.MOD_URL_COMPONENT
 
 val OBSERVABLE_COMMAND
     get() =
-        Commands.literal("observable")
-            .requires { it.hasPermission(4) }
+        Commands
+            .literal("observable")
+            .requires { it.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_OWNER) }
             .executes { ctx ->
                 ctx.source.sendSuccess({ Component.translatable("text.observable.cmd", MOD_URL_COMPONENT) }, false)
                 1
-            }
-            .then(
+            }.then(
                 Commands.literal("config").executes { ctx ->
                     ctx.source.sendSuccess({ Component.literal(ServerSettings.toString()) }, false)
                     1
-                }
-            )
-            .then(
-                Commands.literal("run")
+                },
+            ).then(
+                Commands
+                    .literal("run")
                     .then(
                         Commands.argument("duration", IntegerArgumentType.integer()).executes { ctx ->
                             val duration = IntegerArgumentType.getInteger(ctx, "duration")
                             Observable.PROFILER.runWithDuration(ctx.source.player, duration, false)
                             ctx.source.sendSuccess(
                                 { Component.translatable("text.observable.profile_started", duration) },
-                                false
+                                false,
                             )
                             1
-                        }
-                    )
-            )
-            .then(
-                Commands.literal("allow")
+                        },
+                    ),
+            ).then(
+                Commands
+                    .literal("allow")
                     .then(
                         Commands.argument("player", GameProfileArgument.gameProfile()).executes { ctx ->
                             GameProfileArgument.getGameProfiles(ctx, "player").forEach { player ->
@@ -56,11 +56,11 @@ val OBSERVABLE_COMMAND
                             }
                             ServerSettings.sync()
                             1
-                        }
-                    )
-            )
-            .then(
-                Commands.literal("deny")
+                        },
+                    ),
+            ).then(
+                Commands
+                    .literal("deny")
                     .then(
                         Commands.argument("player", GameProfileArgument.gameProfile()).executes { ctx ->
                             GameProfileArgument.getGameProfiles(ctx, "player").forEach { player ->
@@ -71,49 +71,52 @@ val OBSERVABLE_COMMAND
                             }
                             ServerSettings.sync()
                             1
-                        }
-                    )
-            )
-            .then(
+                        },
+                    ),
+            ).then(
                 Commands.literal("set").let {
                     ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
-                        val argType = when (field.type) {
-                            Integer.TYPE -> IntegerArgumentType.integer()
-                            Boolean::class.java -> BoolArgumentType.bool()
-                            String::class.java -> StringArgumentType.string()
-                            else -> return@fold setCmd
-                        }
+                        val argType =
+                            when (field.type) {
+                                Integer.TYPE -> IntegerArgumentType.integer()
+                                Boolean::class.java -> BoolArgumentType.bool()
+                                String::class.java -> StringArgumentType.string()
+                                else -> return@fold setCmd
+                            }
                         setCmd.then(
-                            Commands.literal(field.name)
+                            Commands
+                                .literal(field.name)
                                 .then(
                                     Commands.argument("newVal", argType).executes { ctx ->
                                         try {
                                             field.isAccessible = true
                                             field.set(
                                                 ServerSettings,
-                                                ctx.getArgument("newVal", field.type)
+                                                ctx.getArgument("newVal", field.type),
                                             )
                                             ServerSettings.sync()
                                             1
                                         } catch (e: Exception) {
                                             e.printStackTrace()
                                             ctx.source.sendFailure(
-                                                Component.literal("Error setting value\n$e")
+                                                Component.literal("Error setting value\n$e"),
                                             )
                                             0
                                         }
-                                    }
-                                )
+                                    },
+                                ),
                         )
                     }
-                }
-            )
-            .then(
-                Commands.literal("tp")
+                },
+            ).then(
+                Commands
+                    .literal("tp")
                     .then(
-                        Commands.argument("dim", DimensionArgument.dimension())
+                        Commands
+                            .argument("dim", DimensionArgument.dimension())
                             .then(
-                                Commands.literal("entity")
+                                Commands
+                                    .literal("entity")
                                     .then(
                                         Commands.argument("id", IntegerArgumentType.integer()).executes { ctx ->
                                             val level = DimensionArgument.getDimension(ctx, "dim")
@@ -123,43 +126,40 @@ val OBSERVABLE_COMMAND
                                                     ?: run {
                                                         ctx.source.sendFailure(
                                                             Component.translatable(
-                                                                "text.observable.entity_not_found"
-                                                            )
+                                                                "text.observable.entity_not_found",
+                                                            ),
                                                         )
                                                         return@executes 0
                                                     }
                                             teleport(ctx, pos)
                                             1
-                                        }
-                                    )
-                            )
-                            .then(
-                                Commands.literal("position")
+                                        },
+                                    ),
+                            ).then(
+                                Commands
+                                    .literal("position")
                                     .then(
                                         Commands.argument("pos", Vec3Argument.vec3()).executes { ctx ->
                                             teleport(ctx, Vec3Argument.getVec3(ctx, "pos"))
                                             1
-                                        }
-                                    )
-                            )
-                    )
-            )
-            .then(
+                                        },
+                                    ),
+                            ),
+                    ),
+            ).then(
                 Commands.literal("reset").executes { ctx ->
                     resetSettings()
                     1
-                }
+                },
             )
 
-fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
+fun teleport(
+    ctx: CommandContext<CommandSourceStack>,
+    pos: Vec3,
+) {
     val player = ctx.source.playerOrException
     val level = DimensionArgument.getDimension(ctx, "dim")
 
-    player.teleportTo(pos.x, pos.y, pos.z)
-    if (level == player.level()) {
-        player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
-    } else {
-        player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)
-    }
+    player.teleportTo(level, pos.x, pos.y, pos.z, setOf(), 0F, 0F, true)
     Observable.LOGGER.info("Moved ${player.gameProfile.name} to (${pos.x}, ${pos.y}, ${pos.z}) in $level")
 }

@@ -7,7 +7,11 @@ import net.minecraft.core.BlockPos
 
 class BlockPosSerializer : KSerializer<BlockPos> {
     @kotlinx.serialization.Serializable
-    private data class SerializableBlockPos(val x: Int, val y: Int, val z: Int) {
+    private data class SerializableBlockPos(
+        val x: Int,
+        val y: Int,
+        val z: Int,
+    ) {
         constructor(pos: BlockPos) : this(pos.x, pos.y, pos.z)
 
         val pos
@@ -19,6 +23,8 @@ class BlockPosSerializer : KSerializer<BlockPos> {
 
     override fun deserialize(decoder: Decoder) = delegate.deserialize(decoder).pos
 
-    override fun serialize(encoder: Encoder, value: BlockPos) =
-        delegate.serialize(encoder, SerializableBlockPos(value))
+    override fun serialize(
+        encoder: Encoder,
+        value: BlockPos,
+    ) = delegate.serialize(encoder, SerializableBlockPos(value))
 }

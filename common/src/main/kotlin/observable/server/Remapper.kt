@@ -9,21 +9,24 @@ import java.net.URL
 
 enum class ModLoader {
     FABRIC,
-    FORGE
+    FORGE,
 }
 
 val BASE_URL = "https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_21"
 val MAPPING_URLS =
     mapOf(
         ModLoader.FABRIC to "$BASE_URL/yarn.json",
-        ModLoader.FORGE to "$BASE_URL/mcp.json"
+        ModLoader.FORGE to "$BASE_URL/mcp.json",
     )
 
 inline val JsonElement?.stringMap
     get() = this?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: mapOf()
 
 object Remapper {
-    data class RemappingData(val classes: Map<String, String>, val methods: Map<String, String>)
+    data class RemappingData(
+        val classes: Map<String, String>,
+        val methods: Map<String, String>,
+    )
 
     lateinit var modLoader: ModLoader
 
@@ -32,7 +35,7 @@ object Remapper {
             val jsonData = Json.parseToJsonElement(URL(MAPPING_URLS[modLoader]).readText()).jsonObject
             RemappingData(
                 if (modLoader == ModLoader.FABRIC) jsonData["classes"].stringMap else mapOf(),
-                jsonData["methods"].stringMap
+                jsonData["methods"].stringMap,
             )
         } catch (e: Exception) {
             Observable.LOGGER.warn("Unable to get profiling data! ${e.message}")

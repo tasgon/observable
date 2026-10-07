@@ -10,9 +10,10 @@ import dev.architectury.registry.client.keymappings.KeyMappingRegistry
 import dev.architectury.utils.GameInstance
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import observable.client.Overlay
@@ -39,22 +40,30 @@ object Observable {
             "key.observable.profile",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
-            "category.observable.keybinds"
+            KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "keybinds")),
         )
     }
 
-    private val CLIENT_CHAT get() = GameInstance.getClient().gui.chat
+    private val CLIENT_CHAT get() = Minecraft.getInstance().gui.chat
 
-    val CHANNEL = BetterChannel(ResourceLocation.fromNamespaceAndPath("observable", "channel"))
+    val CHANNEL = BetterChannel(Identifier.fromNamespaceAndPath("observable", "channel"))
     val LOGGER: Logger = LogManager.getLogger("Observable")
     val PROFILER: Profiler by lazy { Profiler() }
+
+    @Suppress("ktlint:standard:property-naming")
     var RESULTS: ProfilingData? = null
     val PROFILE_SCREEN by lazy { ProfileScreen() }
 
     fun hasPermission(player: Player): Boolean {
         if (ServerSettings.allPlayersAllowed) return true
         if (ServerSettings.allowedPlayers.contains(player.gameProfile.id.toString())) return true
-        if (GameInstance.getServer()?.playerList?.isOp(player.gameProfile) != false) return true
+        if (GameInstance.getServer()?.playerList?.isOp(
+                net.minecraft.server.players
+                    .NameAndId(player.gameProfile),
+            ) != false
+        ) {
+            return true
+        }
         return GameInstance.getServer()?.isSingleplayer ?: false
     }
 
@@ -80,7 +89,7 @@ object Observable {
                         S2CPacket.Availability.Available
                     } else {
                         S2CPacket.Availability.NoPermissions
-                    }
+                    },
                 )
             }
         }
@@ -108,17 +117,18 @@ object Observable {
             Overlay.loadSync()
 
             if (t.link != null) {
-                val linkText = Component.literal(t.link).withStyle(ChatFormatting.UNDERLINE).withStyle {
-                    it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_URL, t.link))
-                }
+                val linkText =
+                    Component.literal(t.link).withStyle(ChatFormatting.UNDERLINE).withStyle {
+                        it.withClickEvent(ClickEvent.OpenUrl(java.net.URI(t.link)))
+                    }
                 val msg = Component.translatable("text.observable.profile_uploaded", linkText)
-                CLIENT_CHAT.addMessage(msg)
+                CLIENT_CHAT.addClientSystemMessage(msg)
             } else {
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.upload_failed"))
-                CLIENT_CHAT.addMessage(
-                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data))
+                CLIENT_CHAT.addClientSystemMessage(Component.translatable("text.observable.upload_failed"))
+                CLIENT_CHAT.addClientSystemMessage(
+                    Component.translatable("text.observable.profile_saved", ProfileExporter.export(t.data)),
                 )
-                CLIENT_CHAT.addMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT))
+                CLIENT_CHAT.addClientSystemMessage(Component.translatable("text.observable.after_save", MOD_URL_COMPONENT))
             }
         }
 
@@ -159,11 +169,11 @@ object Observable {
         ClientLifecycleEvent.CLIENT_LEVEL_LOAD.register { level ->
             Overlay.loadSync(level)
             Marker("observable_announce").mark {
-                CLIENT_CHAT.addMessage(
+                CLIENT_CHAT.addClientSystemMessage(
                     Component.translatable(
                         "text.observable.announce",
-                        MOD_URL_COMPONENT
-                    )
+                        MOD_URL_COMPONENT,
+                    ),
                 )
             }
         }

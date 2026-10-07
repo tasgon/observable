@@ -1,19 +1,17 @@
 package observable.client
 
-import dev.architectury.utils.GameInstance
-import net.minecraft.Util
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
+import net.minecraft.util.Util
 import observable.Observable
 import observable.net.C2SPacket
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
-
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
@@ -21,15 +19,23 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             val NO_PERMISSIONS = ObservableStatus("text.observable.no_permissions")
         }
 
-        data class NewProfile(var duration: Int) : Action()
+        data class NewProfile(
+            var duration: Int,
+        ) : Action()
 
-        data class TPSProfilerRunning(val endTime: Long) : Action()
+        data class TPSProfilerRunning(
+            val endTime: Long,
+        ) : Action()
 
         data object TPSProfilerCompleted : Action()
 
-        data class ObservableStatus(val text: String) : Action()
+        data class ObservableStatus(
+            val text: String,
+        ) : Action()
 
-        data class Custom(val text: String) : Action()
+        data class Custom(
+            val text: String,
+        ) : Action()
 
         val statusMsg
             get() =
@@ -39,8 +45,8 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                         "Running for another %.1f seconds"
                             .format(
                                 ((endTime - System.currentTimeMillis()).toDouble() / 1e3).coerceAtLeast(
-                                    0.0
-                                )
+                                    0.0,
+                                ),
                             )
                     is TPSProfilerCompleted -> "Profiling finished, please wait..."
                     is ObservableStatus -> Component.translatable(text).string
@@ -63,8 +69,8 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                     mc.setScreen(this)
                 },
                 dest,
-                true
-            )
+                true,
+            ),
         )
     }
 
@@ -74,9 +80,14 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         width: Int,
         height: Int,
         component: Component,
-        onPress: () -> Unit
+        onPress: () -> Unit,
     ): Button {
-        val btn = Button.builder(component) { onPress() }.pos(x, y).size(width, height).build()
+        val btn =
+            Button
+                .builder(component) { onPress() }
+                .pos(x, y)
+                .size(width, height)
+                .build()
         return addRenderableWidget(btn)
     }
 
@@ -89,7 +100,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 height / 2 - 48,
                 100,
                 20,
-                Component.translatable("text.observable.profile_tps")
+                Component.translatable("text.observable.profile_tps"),
             ) {
                 val duration = (action as Action.NewProfile).duration
                 Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
@@ -103,23 +114,23 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 startBtn.y,
                 startBtn.width,
                 startBtn.height,
-                Component.translatable("screen.observable.client_settings")
+                Component.translatable("screen.observable.client_settings"),
             ) {
-                GameInstance.getClient().setScreen(ClientSettingsGui())
+                Minecraft.getInstance().setScreen(ClientSettingsGui())
             }
 
         val samplerBtn =
             addRenderableWidget(
-                BetterCheckbox(
+                betterCheckbox(
                     startBtn.x,
                     startBtn.y + startBtn.height + 4,
                     settingsBtn.x + settingsBtn.width - startBtn.x,
                     20,
                     Component.translatable("text.observable.sampler"),
-                    sample
+                    sample,
                 ) {
                     sample = it
-                }
+                },
             )
 
         val longWidth = settingsBtn.x + settingsBtn.width - samplerBtn.x
@@ -127,19 +138,19 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
         val overlayBtn =
             addRenderableWidget(
-                BetterCheckbox(
+                betterCheckbox(
                     samplerBtn.x,
                     samplerBtn.y + samplerBtn.height + 4,
                     samplerBtn.width,
                     20,
                     Component.translatable("text.observable.overlay"),
-                    Overlay.enabled
+                    Overlay.enabled,
                 ) {
                     if (it) {
                         synchronized(Overlay) { Overlay.load() }
                     }
                     Overlay.enabled = it
-                }
+                },
             )
 
         val learnBtn =
@@ -148,7 +159,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 overlayBtn.y + overlayBtn.height + 8,
                 smallWidth,
                 20,
-                Component.translatable("text.observable.docs")
+                Component.translatable("text.observable.docs"),
             ) {
                 openLink("https://github.com/tasgon/observable/wiki")
             }
@@ -158,7 +169,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 learnBtn.y,
                 smallWidth,
                 20,
-                Component.translatable("text.observable.discord")
+                Component.translatable("text.observable.discord"),
             ) {
                 openLink("https://discord.gg/sfPbb3b5tF")
             }
@@ -168,7 +179,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 helpBtn.y,
                 smallWidth,
                 20,
-                Component.translatable("text.observable.donate")
+                Component.translatable("text.observable.donate"),
             ) {
                 openLink("https://github.com/tasgon/observable/wiki/Support-this-project")
             }
@@ -179,19 +190,29 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
 
     override fun isPauseScreen() = false
 
-    override fun render(graphics: GuiGraphics, i: Int, j: Int, f: Float) {
-        super.render(graphics, i, j, f)
+    override fun extractRenderState(
+        graphics: GuiGraphicsExtractor,
+        i: Int,
+        j: Int,
+        f: Float,
+    ) {
+        super.extractRenderState(graphics, i, j, f)
 
-        graphics.drawCenteredString(
+        graphics.centeredText(
             this.font,
             action.statusMsg,
             width / 2,
             startBtn!!.y - this.font.lineHeight - 4,
-            0xFFFFFF
+            -1,
         )
     }
 
-    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean {
+    override fun mouseScrolled(
+        d: Double,
+        e: Double,
+        f: Double,
+        g: Double,
+    ): Boolean {
         (action as? Action.NewProfile)?.apply {
             duration += g.roundToInt() * 5
             duration = this.duration.coerceIn(5, 60)

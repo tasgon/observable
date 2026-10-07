@@ -2,7 +2,7 @@
   "screen.observable.profile": "Анализ нагрузки",
   "screen.observable.results": "Результаты",
   "key.observable.profile": "Показать меню",
-  "category.observable.keybinds": "Observable",
+  "key.category.observable.keybinds": "Observable",
   "text.observable.profile_tps": "Анализ TPS",
   "text.observable.profile_fps": "Анализ FPS",
   "text.observable.sampler": "Использовать семплер",

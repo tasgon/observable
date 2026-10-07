@@ -10,6 +10,8 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 val configFile = Platform.getConfigFolder().resolve("observable.json")
+
+@Suppress("ktlint:standard:property-naming")
 var ServerSettings = loadSettings()
 
 @Serializable
@@ -20,7 +22,7 @@ data class ServerSettingsData(
     var allPlayersAllowed: Boolean = false,
     var allowedPlayers: MutableSet<String> = mutableSetOf(),
     var includeJvmArgs: Boolean = true,
-    var uploadURL: String = "https://observable.tas.sh/v1/add"
+    var uploadURL: String = "https://observable.tas.sh/v1/add",
 ) {
     fun sync() = configFile.writeText(Json.encodeToString(this))
 }

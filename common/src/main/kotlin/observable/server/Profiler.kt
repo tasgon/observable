@@ -31,7 +31,7 @@ class Profiler {
         var time: Long,
         var ticks: Int,
         var traces: TraceMap,
-        var name: String = ""
+        var name: String = "",
     )
 
     var timingsMap = HashMap<Entity, TimingData>()
@@ -42,6 +42,8 @@ class Profiler {
     // TODO: consider splitting out block entity timings
     //    var blockEntityTimingsMap = HashMap<BlockEntity, TimingData>()
     var blockTimingsMap = HashMap<ResourceKey<Level>, HashMap<BlockPos, TimingData>>()
+    private val processingLock = Any()
+
     var notProcessing
         get() = Props.notProcessing
         set(v) {
@@ -52,51 +54,58 @@ class Profiler {
     var startTime: Long = 0
     var startingTicks: Int = 0
 
-    fun process(entity: Entity) =
-        timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
+    fun process(entity: Entity) = timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
 
-    fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(blockEntity.pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(blockEntity::class),
-                    blockEntity.type
-                )
-            }
+    fun processBlockEntity(
+        blockEntity: TickingBlockEntity,
+        level: Level,
+    ) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(blockEntity.pos) {
+            TimingData(
+                0,
+                0,
+                TraceMap(blockEntity::class),
+                blockEntity.type,
+            )
+        }
 
-    fun processBlock(blockState: BlockState, pos: BlockPos, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(blockState::class),
-                    blockState.block.descriptionId
-                )
-            }
+    fun processBlock(
+        blockState: BlockState,
+        pos: BlockPos,
+        level: Level,
+    ) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(pos) {
+            TimingData(
+                0,
+                0,
+                TraceMap(blockState::class),
+                blockState.block.descriptionId,
+            )
+        }
 
-    fun processFluid(fluidState: FluidState, pos: BlockPos, level: Level) =
-        blockTimingsMap
-            .getOrPut(level.dimension()) { HashMap() }
-            .getOrPut(pos) {
-                TimingData(
-                    0,
-                    0,
-                    TraceMap(fluidState::class),
-                    BuiltInRegistries.FLUID.getKey(fluidState.type).toString()
-                )
-            }
+    fun processFluid(
+        fluidState: FluidState,
+        pos: BlockPos,
+        level: Level,
+    ) = blockTimingsMap
+        .getOrPut(level.dimension()) { HashMap() }
+        .getOrPut(pos) {
+            TimingData(
+                0,
+                0,
+                TraceMap(fluidState::class),
+                BuiltInRegistries.FLUID.getKey(fluidState.type).toString(),
+            )
+        }
 
     fun startRunning(sample: Boolean = false) {
         timingsMap.clear()
         blockTimingsMap.clear()
         serverTraceMap = TraceMap()
         startTime = System.currentTimeMillis()
-        synchronized(Props.notProcessing) {
+        synchronized(processingLock) {
             notProcessing = false
             startingTicks = GameInstance.getServer()!!.tickCount
         }
@@ -111,29 +120,31 @@ class Profiler {
                     serverTraceMap.add(serverThread.stackTrace.reversed().iterator())
                     Thread.sleep(interval + Random.nextLong(-deviation, deviation))
                 }
-            }
-                .start()
+            }.start()
         }
     }
 
     fun runWithDuration(
         player: ServerPlayer?,
         duration: Int,
-        sample: Boolean
+        sample: Boolean,
     ) {
         this.player = player
         startRunning(sample)
         val durMs = duration.toLong() * 1000L
         Observable.CHANNEL.sendToPlayers(
             GameInstance.getServer()!!.playerList.players,
-            S2CPacket.ProfilingStarted(startTime + durMs)
+            S2CPacket.ProfilingStarted(startTime + durMs),
         )
         Timer("Profiler", false).schedule(durMs) {
             stopRunning()
         }
     }
 
-    fun uploadProfile(data: ProfilingData, diagnostics: JsonObject): String? {
+    fun uploadProfile(
+        data: ProfilingData,
+        diagnostics: JsonObject,
+    ): String? {
         if (ServerSettings.uploadURL.isEmpty()) {
             Observable.LOGGER.info("uploadURL not set, skipping upload")
             return null
@@ -165,7 +176,7 @@ class Profiler {
     fun stopRunning() {
         val diagnostics = getDiagnostics()
         val ticks: Int
-        synchronized(Props.notProcessing) {
+        synchronized(processingLock) {
             notProcessing = true
             ticks = GameInstance.getServer()!!.tickCount - startingTicks
         }
@@ -177,7 +188,8 @@ class Profiler {
         val link = uploadProfile(data, diagnostics)
         Observable.CHANNEL.sendToPlayersSplit(players, S2CPacket.ProfilingResult(data, link))
         Observable.LOGGER.info("Data transfer complete!")
-        GameInstance.getServer()
+        GameInstance
+            .getServer()
             ?.playerList
             ?.players
             ?.filter { Observable.hasPermission(it) }

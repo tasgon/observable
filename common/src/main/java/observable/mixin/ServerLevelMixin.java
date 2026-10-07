@@ -20,15 +20,15 @@ import java.util.function.Consumer;
 @Mixin(ServerLevel.class)
 public class ServerLevelMixin {
     @Redirect(method = "tickFluid", at = @At(value = "INVOKE",
-        target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)V"))
-    public final void observable$onTickLiquid(FluidState state, Level level, BlockPos pos) {
-        if (Props.notProcessing) state.tick(level, pos);
+        target = "Lnet/minecraft/world/level/material/FluidState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    public final void observable$onTickLiquid(FluidState state, ServerLevel level, BlockPos pos, BlockState blockState) {
+        if (Props.notProcessing) state.tick(level, pos, blockState);
         else {
             if (Props.fluidDepth < 0) Props.fluidDepth = Thread.currentThread().getStackTrace().length - 1;
             Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processFluid(state, pos, level);
             Props.currentTarget.set(data);
             long start = System.nanoTime();
-            state.tick(level, pos);
+            state.tick(level, pos, blockState);
             data.setTime(System.nanoTime() - start + data.getTime());
             Props.currentTarget.set(null);
             data.setTicks(data.getTicks() + 1);
