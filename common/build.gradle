@@ -7,10 +7,12 @@ architectury {
     common("neoforge", "fabric")
 }
 
+repositories {
+    maven { url "https://repo.spongepowered.org/repository/maven-public/" }
+}
+
 dependencies {
-    // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
-    // Do NOT use other classes from fabric loader
-    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    compileOnly("org.spongepowered:mixin:0.8.7") { transitive = false }
     implementation "dev.architectury:architectury:${rootProject.architectury_version}"
 }
 
