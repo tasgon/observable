@@ -54,6 +54,10 @@ jar {
 }
 
 shadowJar {
+    // Let Shadow merge all Kotlin module metadata instead of discarding duplicates.
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
     dependsOn jar
     mainSpec.sourcePaths.clear()
     from(zipTree(jar.archiveFile))
