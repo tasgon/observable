@@ -9,11 +9,14 @@ class TraceMap(
     var className: String = "null",
     var methodName: String = "null",
     val children: MutableMap<MapKey, TraceMap> = mutableMapOf(),
-    var count: Int = 0
+    var count: Int = 0,
 ) {
     constructor(target: KClass<*>) : this(target.java.name)
 
-    data class MapKey(val className: String, val classMethod: String)
+    data class MapKey(
+        val className: String,
+        val classMethod: String,
+    )
 
     fun add(stackTrace: List<StackTraceElement>) {
         val traces = stackTrace.asReversed().iterator()

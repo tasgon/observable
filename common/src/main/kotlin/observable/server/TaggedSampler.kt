@@ -5,8 +5,9 @@ import observable.Props
 import kotlin.random.Random
 
 /** Tagged stack trace sampler. */
-class TaggedSampler(val thread: Thread) : Runnable {
-
+class TaggedSampler(
+    val thread: Thread,
+) : Runnable {
     override fun run() {
         Observable.LOGGER.info("Started sampler thread")
         val interval = ServerSettings.traceInterval.toLong()

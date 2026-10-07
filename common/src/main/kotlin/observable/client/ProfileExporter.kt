@@ -18,9 +18,10 @@ object ProfileExporter {
         if (!dir.exists()) dir.mkdirs()
     }
 
-    private val json = Json {
-        prettyPrint = true
-    }
+    private val json =
+        Json {
+            prettyPrint = true
+        }
 
     fun export(data: ProfilingData): Component {
         val file = File(dir, "${sdf.format(Date())}.json")
@@ -28,9 +29,10 @@ object ProfileExporter {
             it.println(json.encodeToString(data))
         }
 
-        val link = Component.literal(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
-            it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_FILE, dir.absolutePath))
-        }
+        val link =
+            Component.literal(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
+                it.withClickEvent(ClickEvent.OpenFile(dir.absolutePath))
+            }
 
         return link
     }
