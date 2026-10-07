@@ -15,23 +15,30 @@ See what's lagging your world.
 [[dependencies.observable]]
 modId = "architectury"
 type = "required"
-versionRange = "[8,)"
+versionRange = "[20.0,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.observable]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.1.2,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.observable]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.0,)"
+versionRange = "[26.1.2,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[mixins]]
-config = "observable.common.json"
-
 # [[dependencies.observable]]
 # modId = "kotlinforforge"
-# mandatory = true
-# versionRange = "[1.11.0,)"
+# type = "required"
+# versionRange = "[6.2,)"
 # ordering = "AFTER"
 # side = "BOTH"
+
+[[mixins]]
+config = "observable.common.json"

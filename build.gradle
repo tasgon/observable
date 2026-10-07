@@ -1,57 +1,65 @@
-buildscript {
-    ext.kotlin_version = '1.9.25'
-    ext.kotlin_serialization_version = '1.6.0'
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+
 plugins {
-    id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "dev.architectury.loom" version "1.7-SNAPSHOT" apply false
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.10'
-    id "me.shedaniel.unified-publishing" version "0.1.+"
-    id "io.gitlab.arturbosch.detekt" version "1.23.1"
-    id "org.jlleitschuh.gradle.ktlint" version "11.5.1"
-}
-
-apply plugin: 'kotlin'
-
-architectury {
-    minecraft = rootProject.minecraft_version
+    id "architectury-plugin" version "3.5-SNAPSHOT"
+    id "dev.architectury.loom-no-remap" version "1.14-SNAPSHOT" apply false
+    id "org.jetbrains.kotlin.jvm" version "2.4.10" apply false
+    id "org.jetbrains.kotlin.plugin.serialization" version "2.4.10" apply false
+    id "me.shedaniel.unified-publishing" version "0.1.+" apply false
+    id "io.gitlab.arturbosch.detekt" version "1.23.8" apply false
+    id "org.jlleitschuh.gradle.ktlint" version "14.2.0" apply false
+    id "maven-publish"
 }
 
 subprojects {
-    apply plugin: "dev.architectury.loom"
+    apply plugin: "dev.architectury.loom-no-remap"
     apply plugin: "org.jlleitschuh.gradle.ktlint"
 
+    version = rootProject.mod_version
+    group = rootProject.maven_group
+
+    base {
+        archivesName = rootProject.archives_base_name
+    }
+
+    java {
+        withSourcesJar()
+    }
+
     ktlint {
-        disabledRules = ["no-wildcard-imports"]
+        additionalEditorconfig = ["ktlint_standard_no-wildcard-imports": "disabled"]
     }
 
     loom {
         silentMojangMappingsLicense()
+        noIntermediateMappings()
+    }
 
-        runs {
-            server {
-                serverWithGui()
-            }
-        }
+    repositories {
+        mavenCentral()
+        maven { url "https://maven.neoforged.net/releases/" }
+        maven { url "https://thedarkcolour.github.io/KotlinForForge/" }
     }
 
     dependencies {
-        minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-        // The following line declares the mojmap mappings, you may use other mappings as well
-        mappings loom.officialMojangMappings()
-        // The following line declares the yarn mappings you may select this one as well.
-        // mappings "net.fabricmc:yarn:1.16.5+build.9:v2"
-        implementation "org.jetbrains.kotlin:kotlin-stdlib"
-        implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlin_serialization_version"
-        implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlin_serialization_version"
+        minecraft("com.mojang:minecraft:${rootProject.minecraft_version}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:${rootProject.kotlin_serialization_version}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${rootProject.kotlin_serialization_version}")
     }
 
+    jar {
+        from rootProject.file("LICENSE")
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.release = 25
+    }
+
+    tasks.withType(KotlinCompilationTask).configureEach {
+        compilerOptions.jvmTarget = JvmTarget.JVM_25
+    }
 }
 
 allprojects {
@@ -59,49 +67,23 @@ allprojects {
     apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
-    archivesBaseName = rootProject.archives_base_name
-    version = rootProject.mod_version
-    group = rootProject.maven_group
+    architectury {
+        compileOnly()
+    }
 
     repositories {
+        mavenCentral()
         // Add repositories to retrieve artifacts from in here.
-        // You should only use this when depending on other mods because
         // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
         // See https://docs.gradle.org/current/userguide/declaring_repositories.html
         // for more information about repositories.
-        maven { url 'https://jitpack.io' }
-        maven { url "https://maven.neoforged.net/releases/" }
+        maven { url "https://maven.shedaniel.me" }
+        maven { url "https://maven.architectury.dev" }
+        maven { url "https://maven.terraformersmc.com/releases" }
+        maven { url "https://jitpack.io" }
     }
 
-    tasks.withType(JavaCompile) {
-        options.encoding = "UTF-8"
-
-        // The Minecraft launcher currently installs Java 8 for users, so your mod probably wants to target Java 8 too
-        // JDK 9 introduced a new way of specifying this that will make sure no newer classes or methods are used.
-        // We'll use that if it's available, but otherwise we'll use the older option.
-        def targetVersion = 21
-        if (JavaVersion.current().isJava9Compatible()) {
-            options.release = targetVersion
-        }
-    }
-
-    java {
-        withSourcesJar()
-    }
-}
-repositories {
-    mavenCentral()
-}
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-}
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        enabled = false
     }
 }
