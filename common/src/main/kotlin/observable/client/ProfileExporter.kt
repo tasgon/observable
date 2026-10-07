@@ -3,7 +3,6 @@ package observable.client
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.minecraft.ChatFormatting
-import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
 import observable.server.ProfilingData
 import java.io.File
@@ -29,7 +28,7 @@ object ProfileExporter {
         }
 
         val link = Component.literal(file.name).withStyle(ChatFormatting.UNDERLINE).withStyle {
-            it.withClickEvent(ClickEvent(ClickEvent.Action.OPEN_FILE, dir.absolutePath))
+            it.withClickEvent(observable.util.clickOpenFile(dir.absolutePath))
         }
 
         return link

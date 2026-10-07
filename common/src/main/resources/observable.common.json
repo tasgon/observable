@@ -2,9 +2,12 @@
   "required": true,
   "minVersion": "0.8",
   "package": "observable.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
   "mixins": ["LevelMixin", "ServerLevelMixin"],
-  "client": [],
+  "client": [
+    "accessor.ObservableRenderPipelinesAccessor",
+    "accessor.ObservableRenderTypeAccessor"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1

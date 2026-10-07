@@ -1,19 +1,18 @@
 package observable.client
 
-import dev.architectury.utils.GameInstance
-import net.minecraft.Util
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.screens.ConfirmLinkScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
+import net.minecraft.util.Util
 import observable.Observable
+import observable.net.*
 import observable.net.C2SPacket
 import kotlin.math.roundToInt
 
 class ProfileScreen : Screen(Component.translatable("screen.observable.profile")) {
-
     sealed class Action {
         companion object {
             val DEFAULT = NewProfile(30)
@@ -49,7 +48,14 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
     }
 
     var action: Action = Action.UNAVAILABLE
+        set(value) {
+            field = value
+            startBtn?.active = (value is Action.NewProfile)
+        }
     var startBtn: Button? = null
+    var modeBtn: Button? = null
+    var clearBtn: Button? = null
+    var settingsBtn: Button? = null
     var sample = false
 
     private fun openLink(dest: String) {
@@ -58,7 +64,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
             ConfirmLinkScreen(
                 { bl: Boolean ->
                     if (bl) {
-                        Util.getPlatform().openUri(dest)
+                        Util.getPlatform().openUri(java.net.URI(dest))
                     }
                     mc.setScreen(this)
                 },
@@ -86,7 +92,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         val startBtn =
             button(
                 0,
-                height / 2 - 48,
+                height / 2 - 80,
                 100,
                 20,
                 Component.translatable("text.observable.profile_tps")
@@ -94,6 +100,7 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 val duration = (action as Action.NewProfile).duration
                 Observable.CHANNEL.sendToServer(C2SPacket.InitTPSProfile(duration, sample))
             }
+        this.startBtn = startBtn
         startBtn.active = action is Action.NewProfile
         startBtn.x = width / 2 - startBtn.width - 4
 
@@ -105,14 +112,15 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 startBtn.height,
                 Component.translatable("screen.observable.client_settings")
             ) {
-                GameInstance.getClient().setScreen(ClientSettingsGui())
+                Minecraft.getInstance().setScreen(ClientSettingsGui())
             }
+        this.settingsBtn = settingsBtn
 
         val samplerBtn =
             addRenderableWidget(
                 BetterCheckbox(
                     startBtn.x,
-                    startBtn.y + startBtn.height + 4,
+                    startBtn.y + startBtn.height + 18,
                     settingsBtn.x + settingsBtn.width - startBtn.x,
                     20,
                     Component.translatable("text.observable.sampler"),
@@ -122,30 +130,41 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
                 }
             )
 
-        val longWidth = settingsBtn.x + settingsBtn.width - samplerBtn.x
-        val smallWidth = longWidth / 3 - 2
+        // Visual Options Section
+        val modeBtn =
+            button(
+                startBtn.x,
+                samplerBtn.y + samplerBtn.height + 22,
+                settingsBtn.x + settingsBtn.width - startBtn.x,
+                20,
+                getModeMessage()
+            ) {
+                ClientConfig.cycleRenderMode()
+                modeBtn?.message = getModeMessage()
+            }
+        this.modeBtn = modeBtn
 
-        val overlayBtn =
-            addRenderableWidget(
-                BetterCheckbox(
-                    samplerBtn.x,
-                    samplerBtn.y + samplerBtn.height + 4,
-                    samplerBtn.width,
-                    20,
-                    Component.translatable("text.observable.overlay"),
-                    Overlay.enabled
-                ) {
-                    if (it) {
-                        synchronized(Overlay) { Overlay.load() }
-                    }
-                    Overlay.enabled = it
-                }
-            )
+        val clearBtn =
+            button(
+                startBtn.x,
+                modeBtn.y + modeBtn.height + 4,
+                modeBtn.width,
+                20,
+                Component.translatable("text.observable.clear")
+            ) {
+                ProfilerBridge.clear()
+                Overlay.loadSync()
+            }
+        this.clearBtn = clearBtn
+
+        val modeBottomY = clearBtn.y + clearBtn.height + 4
+        val totalWidth = settingsBtn.x + settingsBtn.width - startBtn.x
+        val smallWidth = (totalWidth - 8) / 3
 
         val learnBtn =
             button(
                 startBtn.x,
-                overlayBtn.y + overlayBtn.height + 8,
+                modeBottomY,
                 smallWidth,
                 20,
                 Component.translatable("text.observable.docs")
@@ -177,26 +196,86 @@ class ProfileScreen : Screen(Component.translatable("screen.observable.profile")
         Observable.CHANNEL.sendToServer(C2SPacket.RequestAvailability)
     }
 
-    override fun isPauseScreen() = false
-
-    override fun render(graphics: GuiGraphics, i: Int, j: Int, f: Float) {
-        super.render(graphics, i, j, f)
-
-        graphics.drawCenteredString(
-            this.font,
-            action.statusMsg,
-            width / 2,
-            startBtn!!.y - this.font.lineHeight - 4,
-            0xFFFFFF
-        )
+    private fun getModeMessage(): Component {
+        val mode =
+            when (ClientConfig.data.renderMode) {
+                RenderMode.CUBES -> "text.observable.render_mode.cubes"
+                RenderMode.WIREFRAME -> "text.observable.render_mode.wireframe"
+            }
+        return Component.translatable("text.observable.render_mode").append(": ").append(Component.translatable(mode))
     }
 
-    override fun mouseScrolled(d: Double, e: Double, f: Double, g: Double): Boolean {
-        (action as? Action.NewProfile)?.apply {
-            duration += g.roundToInt() * 5
-            duration = this.duration.coerceIn(5, 60)
+    override fun isPauseScreen() = false
+
+    override fun keyPressed(event: net.minecraft.client.input.KeyEvent): Boolean {
+        if (ObservableClient.KEY_OPEN_SETTINGS.matches(event)) {
+            this.onClose()
+            return true
+        }
+        return super.keyPressed(event)
+    }
+
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, i: Int, j: Int, f: Float) {
+        super.extractRenderState(graphics, i, j, f)
+
+        val msg = action.statusMsg
+        val textX = width / 2 - this.font.width(msg) / 2
+        val textY = startBtn!!.y - this.font.lineHeight - 6
+
+        graphics.text(this.font, msg, textX, textY, 0xFFFFFFFF.toInt(), true)
+
+        // Update button states
+        clearBtn?.active = Observable.RESULTS != null
+        modeBtn?.message = getModeMessage()
+
+        // Category Headers
+        val headerColor = -1 // White
+        val samplerBtn =
+            this.children().filterIsInstance<net.minecraft.client.gui.components.Checkbox>().firstOrNull {
+                it.message == Component.translatable("text.observable.sampler")
+            }
+        samplerBtn?.let {
+            val profilerHeader = Component.translatable("text.observable.category.profiler")
+            graphics.text(this.font, profilerHeader, it.x, it.y - 14, headerColor, true)
+            graphics.fill(
+                it.x,
+                it.y - 4,
+                it.x + (settingsBtn?.x ?: 0) + (settingsBtn?.width ?: 0) - (startBtn?.x ?: 0),
+                it.y - 3,
+                0x40FFFFFF
+            )
         }
 
-        return super.mouseScrolled(d, e, f, g)
+        modeBtn?.let {
+            val visualsHeader = Component.translatable("text.observable.category.visuals")
+            graphics.text(this.font, visualsHeader, it.x, it.y - 14, headerColor, true)
+            graphics.fill(it.x, it.y - 4, it.x + it.width, it.y - 3, 0x40FFFFFF)
+        }
+
+        // Help Hint under the bottom buttons
+        clearBtn?.let {
+            val hintY = it.y + it.height + 4 + 20 + 8
+            val hintKeyOverlay = ObservableClient.KEY_TOGGLE_OVERLAY.translatedKeyMessage
+            val hintKeySettings = ObservableClient.KEY_OPEN_SETTINGS.translatedKeyMessage
+            val hintText =
+                if (ObservableClient.KEY_TOGGLE_OVERLAY.isUnbound) {
+                    Component.translatable("text.observable.help_unbound", hintKeySettings)
+                } else {
+                    Component.translatable("text.observable.help_toggle", hintKeyOverlay, hintKeySettings)
+                }
+            graphics.text(this.font, hintText, width / 2 - this.font.width(hintText) / 2, hintY, -1, true)
+        }
+    }
+
+    override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+        (action as? Action.NewProfile)?.apply {
+            duration += (scrollY.roundToInt() * 5)
+            duration = this.duration.coerceIn(5, 60)
+            ClientConfig.data.profileDuration = this.duration
+            ClientConfig.save()
+            return true
+        }
+
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }
 }
