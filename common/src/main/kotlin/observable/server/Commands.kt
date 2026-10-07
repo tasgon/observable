@@ -4,22 +4,22 @@ import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
-import dev.architectury.utils.GameInstance
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.DimensionArgument
 import net.minecraft.commands.arguments.GameProfileArgument
 import net.minecraft.commands.arguments.coordinates.Vec3Argument
 import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.PositionMoveRotation
 import net.minecraft.world.phys.Vec3
 import observable.Observable
-import observable.net.S2CPacket
+import observable.net.*
 import observable.util.MOD_URL_COMPONENT
 
 val OBSERVABLE_COMMAND
     get() =
         Commands.literal("observable")
-            .requires { it.hasPermission(4) }
+            .requires { it.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER) }
             .executes { ctx ->
                 ctx.source.sendSuccess({ Component.translatable("text.observable.cmd", MOD_URL_COMPONENT) }, false)
                 1
@@ -50,7 +50,7 @@ val OBSERVABLE_COMMAND
                         Commands.argument("player", GameProfileArgument.gameProfile()).executes { ctx ->
                             GameProfileArgument.getGameProfiles(ctx, "player").forEach { player ->
                                 ServerSettings.allowedPlayers.add(player.id.toString())
-                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                Observable.SERVER_INSTANCE?.playerList?.getPlayer(player.id)?.let {
                                     Observable.CHANNEL.sendToPlayer(it, S2CPacket.Availability.Available)
                                 }
                             }
@@ -65,7 +65,7 @@ val OBSERVABLE_COMMAND
                         Commands.argument("player", GameProfileArgument.gameProfile()).executes { ctx ->
                             GameProfileArgument.getGameProfiles(ctx, "player").forEach { player ->
                                 ServerSettings.allowedPlayers.remove(player.id.toString())
-                                GameInstance.getServer()?.playerList?.getPlayer(player.id)?.let {
+                                Observable.SERVER_INSTANCE?.playerList?.getPlayer(player.id)?.let {
                                     Observable.CHANNEL.sendToPlayer(it, S2CPacket.Availability.NoPermissions)
                                 }
                             }
@@ -76,7 +76,7 @@ val OBSERVABLE_COMMAND
             )
             .then(
                 Commands.literal("set").let {
-                    ServerSettings::class.java.declaredFields.fold(it) { setCmd, field ->
+                    ServerSettingsData::class.java.declaredFields.fold(it) { setCmd, field ->
                         val argType = when (field.type) {
                             Integer.TYPE -> IntegerArgumentType.integer()
                             Boolean::class.java -> BoolArgumentType.bool()
@@ -155,11 +155,12 @@ fun teleport(ctx: CommandContext<CommandSourceStack>, pos: Vec3) {
     val player = ctx.source.playerOrException
     val level = DimensionArgument.getDimension(ctx, "dim")
 
+    val rotation = PositionMoveRotation(pos, Vec3.ZERO, 0f, 0f)
     player.teleportTo(pos.x, pos.y, pos.z)
     if (level == player.level()) {
-        player.connection.teleport(pos.x, pos.y, pos.z, 0F, 0F, setOf())
+        player.connection.teleport(rotation, setOf())
     } else {
-        player.teleportTo(level, pos.x, pos.y, pos.z, 0F, 0F)
+        player.teleportTo(level, pos.x, pos.y, pos.z, setOf(), 0F, 0F, false)
     }
     Observable.LOGGER.info("Moved ${player.gameProfile.name} to (${pos.x}, ${pos.y}, ${pos.z}) in $level")
 }

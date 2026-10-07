@@ -4,12 +4,13 @@ import dev.architectury.platform.Platform
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.nio.file.Path
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
-val configFile = Platform.getConfigFolder().resolve("observable.json")
+val configFile: Path by lazy { Platform.getConfigFolder().resolve("observable.json") }
 var ServerSettings = loadSettings()
 
 @Serializable
@@ -31,7 +32,11 @@ fun loadSettings(): ServerSettingsData {
         configFile.writeText(Json.encodeToString(settings))
         return settings
     }
-    return Json.decodeFromString(configFile.readText())
+    return try {
+        Json.decodeFromString(configFile.readText())
+    } catch (e: Exception) {
+        ServerSettingsData()
+    }
 }
 
 fun resetSettings() {
